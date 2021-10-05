@@ -60,8 +60,16 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define gco2th(o)  check_exp((o)->tt_ == LUA_TTHREAD, &cast(union GCUnion*, o)->th)
 #define gcvalue(o) ((o)->value_.gc)
 
+#define iscollectable(o) \
+    ((o)->tt_ == LUA_TTHREAD || \
+	 (o)->tt_ == LUA_SHRSTR  || \
+	 (o)->tt_ == LUA_LNGSTR  || \
+	 (o)->tt_ == LUA_TTABLE  || \
+	 (o)->tt_ == LUA_TLCL    || \
+	 (o)->tt_ == LUA_TCCL)
+
 #define markobject(L, o) if (iswhite(o)) { reallymarkobject(L, obj2gco(o)); }
-#define markvalue(L, o)  if (iswhite(gcvalue(o))) { reallymarkobject(L, gcvalue(o)); }
+#define markvalue(L, o)  if (iscollectable(o) && iswhite(gcvalue(o))) { reallymarkobject(L, gcvalue(o)); }
 #define linkgclist(gco, prev) { (gco)->gclist = prev; prev = obj2gco(gco); }
 
 // try trigger gc

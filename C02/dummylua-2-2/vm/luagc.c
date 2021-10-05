@@ -112,7 +112,7 @@ static void propagatemark(struct lua_State* L) {
 static void propagateall(struct lua_State* L) {
     struct global_State* g = G(L);
     while(g->gray) {
-        propagateall(L);
+        propagatemark(L);
     }
 }
 

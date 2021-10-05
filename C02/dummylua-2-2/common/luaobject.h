@@ -67,8 +67,7 @@ typedef struct lua_TValue {
 } TValue;
 
 typedef struct TString {
-    int test_field1;
-    int test_field2;
+    CommonHeader;
 } TString;
 
 #endif 

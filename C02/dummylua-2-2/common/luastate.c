@@ -58,7 +58,7 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
     struct global_State* g;
     struct lua_State* L;
     
-    struct LG* lg = (struct LG*)(*alloc)(ud, NULL, LUA_TTHREAD, sizeof(struct LG));
+    struct LG* lg = (struct LG*)(*alloc)(ud, NULL, 0, sizeof(struct LG));
     if (!lg) {
         return NULL;
     }
@@ -87,6 +87,7 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
 
     L->marked = luaC_white(g);
     L->gclist = NULL;
+    L->tt_ = LUA_TTHREAD;
 
     stack_init(L);
 
