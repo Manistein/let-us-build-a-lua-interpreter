@@ -21,6 +21,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "luastate.h"
 #include "luamem.h"
 #include "../vm/luagc.h"
+#include "luastring.h"
 
 typedef struct LX {
     lu_byte extra_[LUA_EXTRASPACE];
@@ -54,11 +55,27 @@ static void stack_init(struct lua_State* L) {
     L->ci->previous = L->ci->next = NULL;
 }
 
+#define addbuff(b, t, p) \
+    { memcpy(b, t, sizeof(t)); p += sizeof(t); }
+
+static unsigned int makeseed(struct lua_State* L) {
+    char buff[4 * sizeof(size_t)];
+    unsigned int h = time(NULL);
+    int p = 0;
+
+    addbuff(buff, L, p);
+    addbuff(buff, &h, p);
+    addbuff(buff, luaO_nilobject, p);
+    addbuff(buff, &lua_newstate, p);
+
+    return luaS_hash(L, buff, p, h);
+}
+
 struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
     struct global_State* g;
     struct lua_State* L;
     
-    struct LG* lg = (struct LG*)(*alloc)(ud, NULL, 0, sizeof(struct LG));
+    struct LG* lg = (struct LG*)(*alloc)(ud, NULL, LUA_TTHREAD, sizeof(struct LG));
     if (!lg) {
         return NULL;
     }
@@ -68,6 +85,7 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
     g->panic = NULL;
     
     L = &lg->l.l;
+    L->tt_ = LUA_TTHREAD;
     L->nci = 0;
     G(L) = g;
     g->mainthread = L;
@@ -77,6 +95,7 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
     g->currentwhite = bitmask(WHITE0BIT);
     g->totalbytes = sizeof(LG);
     g->allgc = NULL;
+    g->fixgc = NULL;
     g->sweepgc = NULL;
     g->gray = NULL;
     g->grayagain = NULL;
@@ -84,12 +103,14 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
     g->GCmemtrav = 0;
     g->GCestimate = 0;
     g->GCstepmul = LUA_GCSTEPMUL;
+    g->seed = makeseed(L);
 
     L->marked = luaC_white(g);
     L->gclist = NULL;
-    L->tt_ = LUA_TTHREAD;
 
     stack_init(L);
+
+    luaS_init(L);
 
     return L;
 }
@@ -97,7 +118,6 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
 #define fromstate(L) (cast(LX*, cast(lu_byte*, (L)) - offsetof(LX, l)))
 
 static void free_stack(struct lua_State* L) {
-    global_State* g = G(L);
     luaM_free(L, L->stack, sizeof(TValue));
     L->stack = L->stack_last = L->top = NULL;
     L->stack_size = 0;
@@ -153,6 +173,11 @@ void setpvalue(StkId target, void* p) {
     target->tt_ = LUA_TLIGHTUSERDATA;
 }
 
+void setgco(StkId target, struct GCObject* gco) {
+    target->value_.gc = gco;
+    target->tt_ = gco->tt_;
+}
+
 void setobj(StkId target, StkId value) {
     target->value_ = value->value_;
     target->tt_ = value->tt_;
@@ -190,6 +215,14 @@ void lua_pushnil(struct lua_State* L) {
 
 void lua_pushlightuserdata(struct lua_State* L, void* p) {
     setpvalue(L->top, p);
+    increase_top(L);
+}
+
+void lua_pushstring(struct lua_State* L, const char* str) {
+    unsigned int l = strlen(str);
+    struct TString* ts = luaS_newlstr(L, str, l);
+    struct GCObject* gco = obj2gco(ts);
+    setgco(L->top, gco);
     increase_top(L);
 }
 
@@ -241,6 +274,16 @@ bool lua_toboolean(struct lua_State* L, int idx) {
 int lua_isnil(struct lua_State* L, int idx) {
     TValue* addr = index2addr(L, idx);
     return addr->tt_ == LUA_TNIL;
+}
+
+char* lua_tostring(struct lua_State* L, int idx) {
+    TValue* addr = index2addr(L, idx);
+    if (novariant(addr) != LUA_TSTRING) {
+        return NULL; 
+    }
+
+    struct TString* ts = gco2ts(addr->value_.gc);
+    return getstr(ts);
 }
 
 int lua_gettop(struct lua_State* L) {

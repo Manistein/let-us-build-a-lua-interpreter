@@ -32,6 +32,7 @@ void luaL_pushlightuserdata(struct lua_State* L, void* userdata);
 void luaL_pushnil(struct lua_State* L);
 void luaL_pushcfunction(struct lua_State* L, lua_CFunction f);
 void luaL_pushboolean(struct lua_State* L, bool boolean);
+void luaL_pushstring(struct lua_State* L, const char* str);
 int luaL_pcall(struct lua_State* L, int narg, int nresult);
 
 bool luaL_checkinteger(struct lua_State* L, int idx);
@@ -39,6 +40,7 @@ lua_Integer luaL_tointeger(struct lua_State* L, int idx);
 lua_Number luaL_tonumber(struct lua_State* L, int idx);
 void* luaL_touserdata(struct lua_State* L, int idx);
 bool luaL_toboolean(struct lua_State* L, int idx);
+char* luaL_tostring(struct lua_State* L, int index);
 int luaL_isnil(struct lua_State* L, int idx);
 TValue* luaL_index2addr(struct lua_State* L, int idx);
 

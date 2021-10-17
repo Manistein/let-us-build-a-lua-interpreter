@@ -31,6 +31,10 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define GCSTEPSIZE 1024  //1kb
 #define GCPAUSE 100
 
+// size for string cache
+#define STRCACHE_M 53
+#define STRCACHE_N 2
+
 typedef TValue* StkId;
 
 struct CallInfo {
@@ -60,11 +64,23 @@ typedef struct lua_State {
     struct GCObject* gclist;
 } lua_State;
 
+// only for short string
+struct stringtable {
+    struct TString** hash;
+    unsigned int nuse;
+    unsigned int size;
+};
+
 typedef struct global_State {
     struct lua_State* mainthread;
     lua_Alloc frealloc;
     void* ud; 
     lua_CFunction panic;
+
+    struct stringtable strt;
+    TString* strcache[STRCACHE_M][STRCACHE_N];
+    unsigned int seed;              // hash seed, just for string hash
+    TString* memerrmsg;
 
     //gc fields
     lu_byte gcstate;
@@ -73,6 +89,7 @@ typedef struct global_State {
     struct GCObject** sweepgc;
     struct GCObject* gray;
     struct GCObject* grayagain;
+    struct GCObject* fixgc;         // objects can not collect by gc
     lu_mem totalbytes;
     l_mem GCdebt;                   // GCdebt will be negative
     lu_mem GCmemtrav;               // per gc step traverse memory bytes 
@@ -84,6 +101,7 @@ typedef struct global_State {
 union GCUnion {
     struct GCObject gc;
     lua_State th;
+    TString ts;
 };
 
 struct lua_State* lua_newstate(lua_Alloc alloc, void* ud);
@@ -95,6 +113,7 @@ void setfltvalue(StkId target, float number);
 void setbvalue(StkId target, bool b);
 void setnilvalue(StkId target);
 void setpvalue(StkId target, void* p);
+void setgco(StkId target, struct GCObject* gco);
 
 void setobj(StkId target, StkId value);
 
@@ -105,11 +124,13 @@ void lua_pushnumber(struct lua_State* L, float number);
 void lua_pushboolean(struct lua_State* L, bool b);
 void lua_pushnil(struct lua_State* L);
 void lua_pushlightuserdata(struct lua_State* L, void* p);
+void lua_pushstring(struct lua_State* L, const char* str);
 
 lua_Integer lua_tointegerx(struct lua_State* L, int idx, int* isnum);
 lua_Number lua_tonumberx(struct lua_State* L, int idx, int* isnum);
 bool lua_toboolean(struct lua_State* L, int idx);
 int lua_isnil(struct lua_State* L, int idx);
+char* lua_tostring(struct lua_State* L, int idx);
 
 void lua_settop(struct lua_State* L, int idx);
 int lua_gettop(struct lua_State* L);

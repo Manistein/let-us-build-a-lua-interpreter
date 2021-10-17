@@ -20,6 +20,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 
 #include "luaaux.h"
 #include "../vm/luado.h"
+#include "../common/luastring.h"
 
 static void* l_alloc(void* ud, void* ptr, size_t osize, size_t nsize) {
     (void)ud;
@@ -65,6 +66,10 @@ void luaL_pushcfunction(struct lua_State* L, lua_CFunction f) {
 
 void luaL_pushboolean(struct lua_State* L, bool boolean) {
     lua_pushboolean(L, boolean);
+}
+
+void luaL_pushstring(struct lua_State* L, const char* str) {
+    lua_pushstring(L, str); 
 }
 
 // function call
@@ -123,6 +128,10 @@ bool luaL_toboolean(struct lua_State* L, int idx) {
 
 int luaL_isnil(struct lua_State* L, int idx) {
     return lua_isnil(L, idx);
+}
+
+char* luaL_tostring(struct lua_State* L, int idx) {
+    return lua_tostring(L, idx);
 }
 
 TValue* luaL_index2addr(struct lua_State* L, int idx) {

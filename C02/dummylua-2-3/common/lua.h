@@ -26,8 +26,11 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <stddef.h>
 #include <assert.h>
+#include <limits.h>
+#include <time.h>
 
 
 
@@ -51,6 +54,8 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define cast(t, exp) ((t)(exp))
 #define savestack(L, o) ((o) - (L)->stack)
 #define restorestack(L, o) ((L)->stack + (o)) 
+#define point2uint(p) ((unsigned int)((size_t)p & UINT_MAX))
+#define novariant(o) ((o)->tt_ & 0xf)
 
 // basic object type
 #define LUA_TNUMBER 1
