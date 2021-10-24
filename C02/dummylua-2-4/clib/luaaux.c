@@ -138,6 +138,22 @@ TValue* luaL_index2addr(struct lua_State* L, int idx) {
     return index2addr(L, idx);
 }
 
+int luaL_createtable(struct lua_State* L) {
+    return lua_createtable(L);
+}
+
+int luaL_settable(struct lua_State* L, int idx) {
+    return lua_settable(L, idx);
+}
+
+int luaL_gettable(struct lua_State* L, int idx) {
+    return lua_gettable(L, idx);  
+}
+
+int luaL_getglobal(struct lua_State* L) {
+    return lua_getglobal(L);
+}
+
 void luaL_pop(struct lua_State* L) {
     lua_pop(L); 
 }

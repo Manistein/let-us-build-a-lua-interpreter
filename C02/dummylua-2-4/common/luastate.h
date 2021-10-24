@@ -35,6 +35,9 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define STRCACHE_M 53
 #define STRCACHE_N 2
 
+#define LUA_MAINTHREADIDX 0
+#define LUA_GLOBALTBLIDX 1
+
 typedef TValue* StkId;
 
 struct CallInfo {
@@ -81,6 +84,7 @@ typedef struct global_State {
     TString* strcache[STRCACHE_M][STRCACHE_N];
     unsigned int seed;              // hash seed, just for string hash
     TString* memerrmsg;
+    TValue l_registry;
 
     //gc fields
     lu_byte gcstate;
@@ -102,6 +106,7 @@ union GCUnion {
     struct GCObject gc;
     lua_State th;
     TString ts;
+    struct Table tbl;
 };
 
 struct lua_State* lua_newstate(lua_Alloc alloc, void* ud);
@@ -125,6 +130,11 @@ void lua_pushboolean(struct lua_State* L, bool b);
 void lua_pushnil(struct lua_State* L);
 void lua_pushlightuserdata(struct lua_State* L, void* p);
 void lua_pushstring(struct lua_State* L, const char* str);
+
+int lua_createtable(struct lua_State* L);
+int lua_settable(struct lua_State* L, int idx);
+int lua_gettable(struct lua_State* L, int idx);
+int lua_getglobal(struct lua_State* L);
 
 lua_Integer lua_tointegerx(struct lua_State* L, int idx, int* isnum);
 lua_Number lua_tonumberx(struct lua_State* L, int idx, int* isnum);

@@ -21,6 +21,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "luagc.h"
 #include "../common/luamem.h"
 #include "../common/luastring.h"
+#include "../common/luatable.h"
 
 #define GCMAXSWEEPGCO 25
 
@@ -48,6 +49,9 @@ void reallymarkobject(struct lua_State* L, struct GCObject* gco) {
     switch(gco->tt_) {
         case LUA_TTHREAD:{
             linkgclist(gco2th(gco), g->gray);            
+        } break;
+        case LUA_TTABLE:{
+            linkgclist(gco2tbl(gco), g->gray);
         } break;
         case LUA_SHRSTR:{ 
             gray2black(gco);
@@ -82,15 +86,36 @@ static void restart_collection(struct lua_State* L) {
     struct global_State* g = G(L);
     g->gray = g->grayagain = NULL;
     markobject(L, g->mainthread); 
+    markvalue(L, &g->l_registry);
 }
 
-static lu_mem traversethread(struct lua_State* L, struct lua_State* th) {
+static lu_mem traverse_thread(struct lua_State* L, struct lua_State* th) {
     TValue* o = th->stack;
     for (; o < th->top; o ++) {
         markvalue(L, o);
     }
 
     return sizeof(struct lua_State) + sizeof(TValue) * th->stack_size + sizeof(struct CallInfo) * th->nci;
+}
+
+static lu_mem traverse_strong_table(struct lua_State* L, struct Table* t) {
+    for (int i = 0; i < t->arraysize; i++) {
+        markvalue(L, &t->array[i]); 
+    }
+
+    for (int i = 0; i < twoto(t->lsizenode); i++) {
+        Node* n = getnode(t, i);
+        if (ttisnil(getval(n))) {
+            TValue* deadkey = getwkey(n);
+            deadkey->tt_ = LUA_TDEADKEY;
+        }
+        else {
+            markvalue(L, getwkey(n));
+            markvalue(L, getval(n));
+        }
+    }
+
+    return sizeof(struct Table) + sizeof(TValue) * t->arraysize + sizeof(Node) * twoto(t->lsizenode);
 }
 
 static void propagatemark(struct lua_State* L) {
@@ -108,7 +133,12 @@ static void propagatemark(struct lua_State* L) {
             struct lua_State* th = gco2th(gco);
             g->gray = th->gclist;
             linkgclist(th, g->grayagain);
-            size = traversethread(L, th);
+            size = traverse_thread(L, th);
+        } break;
+        case LUA_TTABLE:{
+            struct Table* t = gco2tbl(gco);
+            g->gray = t->gclist;
+            size = traverse_strong_table(L, t);
         } break;
         default:break;
     }
@@ -148,6 +178,12 @@ static lu_mem freeobj(struct lua_State* L, struct GCObject* gco) {
             struct TString* ts = gco2ts(gco);
             lu_mem sz = sizelstring(ts->u.lnglen);
             luaM_free(L, ts, sz);
+        } break;
+        case LUA_TTABLE: {
+            struct Table* tbl = gco2tbl(gco);
+            lu_mem sz = sizeof(struct Table) + tbl->arraysize * sizeof(TValue) + twoto(tbl->lsizenode) * sizeof(Node);
+            luaH_free(L, tbl);
+            return sz;
         } break;
         default:{
             lua_assert(0);
@@ -284,6 +320,14 @@ void luaC_fix(struct lua_State* L, struct GCObject* o) {
     g->fixgc = o;
     white2gray(o);
 }
+
+void luaC_barrierback_(struct lua_State* L, struct Table* t, const TValue* o) {
+    struct global_State* g = G(L);
+    lua_assert(isblack(t) && iswhite(o));
+    black2gray(t);
+    linkgclist(t, g->grayagain);
+}
+
 
 void luaC_freeallobjects(struct lua_State* L) {
     struct global_State* g = G(L);

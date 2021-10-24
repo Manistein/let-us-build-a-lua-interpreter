@@ -31,6 +31,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include <assert.h>
 #include <limits.h>
 #include <time.h>
+#include <math.h>
 
 
 
@@ -42,6 +43,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define LUA_NUMBER float 
 #endif 
 
+#define LUA_UNSIGNED unsigned LUA_INTEGER 
 #define lua_assert(c) ((void)0)
 #define check_exp(c, e) (lua_assert(c), e)
 
@@ -67,6 +69,8 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define LUA_TFUNCTION 7
 #define LUA_TTHREAD 8
 #define LUA_TNONE 9
+#define LUA_NUMS LUA_TNONE 
+#define LUA_TDEADKEY (LUA_NUMS + 1)
 
 // stack define
 #define LUA_MINSTACK 20
@@ -83,6 +87,8 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 // mem define
 typedef size_t      lu_mem;
 typedef ptrdiff_t   l_mem;
+
+typedef LUA_UNSIGNED lua_Unsigned;
 
 #define MAX_LUMEM ((lu_mem)(~(lu_mem)0))
 #define MAX_LMEM  (MAX_LUMEM >> 1)

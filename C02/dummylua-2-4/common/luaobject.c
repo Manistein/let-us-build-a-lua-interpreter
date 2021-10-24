@@ -19,3 +19,11 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
     SOFTWARE.*/
 
 #include "luaobject.h"
+
+const TValue luaO_nilobject_ = { {NULL}, LUA_TNIL };
+
+int luaO_ceillog2(int value) {
+    int x = 0;
+    for (; value > (int)pow(2, x); x ++);
+    return x;
+}

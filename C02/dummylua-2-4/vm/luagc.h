@@ -61,10 +61,11 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define obj2gco(o) (&cast(union GCUnion*, o)->gc)
 #define gco2th(o)  check_exp((o)->tt_ == LUA_TTHREAD, &cast(union GCUnion*, o)->th)
 #define gco2ts(o) check_exp((o)->tt_ == LUA_SHRSTR || (o)->tt_ == LUA_LNGSTR, &cast(union GCUnion*, o)->ts)
+#define gco2tbl(o) check_exp((o)->tt_ == LUA_TTABLE, &cast(union GCUnion*, o)->tbl)
 #define gcvalue(o) ((o)->value_.gc)
 
 #define iscollectable(o) \
-    ((o)->tt_ == LUA_TTHREAD || (o)->tt_ == LUA_SHRSTR || (o)->tt_ == LUA_LNGSTR)
+    ((o)->tt_ == LUA_TTHREAD || (o)->tt_ == LUA_SHRSTR || (o)->tt_ == LUA_LNGSTR || (o)->tt_ == LUA_TTABLE)
 
 #define markobject(L, o) if (iswhite(o)) { reallymarkobject(L, obj2gco(o)); }
 #define markvalue(L, o)  if (iscollectable(o) && iswhite(gcvalue(o))) { reallymarkobject(L, gcvalue(o)); }
@@ -74,9 +75,13 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define luaC_condgc(pre, L, pos) if (G(L)->GCdebt > 0) { pre; luaC_step(L); pos; } 
 #define luaC_checkgc(L) luaC_condgc((void)0, L, (void)0)
 
+#define luaC_barrierback(L, t, o) \
+    (isblack(t) && iscollectable(o) && iswhite(gcvalue(o))) ? luaC_barrierback_(L, t, o) : cast(void, 0)
+
 struct GCObject* luaC_newobj(struct lua_State* L, lu_byte tt_, size_t size);
 void luaC_step(struct lua_State* L);
 void luaC_fix(struct lua_State* L, struct GCObject* o); // GCObject can not collect
+void luaC_barrierback_(struct lua_State* L, struct Table* t, const TValue* o);
 void reallymarkobject(struct lua_State* L, struct GCObject* gc);
 void luaC_freeallobjects(struct lua_State* L);
 

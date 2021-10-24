@@ -21,7 +21,9 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "luastate.h"
 #include "luamem.h"
 #include "../vm/luagc.h"
+#include "../vm/luavm.h"
 #include "luastring.h"
+#include "luatable.h"
 
 typedef struct LX {
     lu_byte extra_[LUA_EXTRASPACE];
@@ -53,6 +55,18 @@ static void stack_init(struct lua_State* L) {
     L->ci->func = L->stack;
     L->ci->top = L->stack + LUA_MINSTACK;
     L->ci->previous = L->ci->next = NULL;
+}
+
+static void init_registry(struct lua_State* L) {
+    struct global_State* g = G(L);
+
+    struct Table* t = luaH_new(L);
+    gcvalue(&g->l_registry) = obj2gco(t);
+    g->l_registry.tt_ = LUA_TTABLE;
+    luaH_resize(L, t, 2, 0);
+
+    setgco(&t->array[LUA_MAINTHREADIDX], obj2gco(g->mainthread));
+    setgco(&t->array[LUA_GLOBALTBLIDX], obj2gco(luaH_new(L)));
 }
 
 #define addbuff(b, t, p) \
@@ -109,8 +123,8 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
     L->gclist = NULL;
 
     stack_init(L);
-
     luaS_init(L);
+    init_registry(L);
 
     return L;
 }
@@ -224,6 +238,38 @@ void lua_pushstring(struct lua_State* L, const char* str) {
     struct GCObject* gco = obj2gco(ts);
     setgco(L->top, gco);
     increase_top(L);
+}
+
+int lua_createtable(struct lua_State* L) {
+    struct Table* tbl = luaH_new(L);
+    struct GCObject* gco = obj2gco(tbl);
+    setgco(L->top, gco);
+    increase_top(L);
+    return 1;
+}
+
+int lua_settable(struct lua_State* L, int idx) {
+    TValue* o = index2addr(L, idx);
+    struct Table* t = gco2tbl(gcvalue(o));
+    luaV_settable(L, t, L->top - 2, L->top - 1);
+    L->top = L->top - 2;
+    return 1;
+}
+
+int lua_gettable(struct lua_State* L, int idx) {
+    TValue* o = index2addr(L, idx);
+    struct Table* t = gco2tbl(gcvalue(o));
+    luaV_gettable(L, t, L->top - 1, L->top - 1);
+    return 1;
+}
+
+int lua_getglobal(struct lua_State* L) {
+    struct global_State* g = G(L);
+    struct Table* registry = gco2tbl(gcvalue(&g->l_registry));
+    struct Table* t = gco2tbl(gcvalue(&registry->array[LUA_GLOBALTBLIDX]));
+    setgco(L->top, obj2gco(t));
+    increase_top(L);
+    return 1;
 }
 
 TValue* index2addr(struct lua_State* L, int idx) {

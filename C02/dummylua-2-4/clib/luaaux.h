@@ -44,6 +44,11 @@ char* luaL_tostring(struct lua_State* L, int index);
 int luaL_isnil(struct lua_State* L, int idx);
 TValue* luaL_index2addr(struct lua_State* L, int idx);
 
+int luaL_createtable(struct lua_State* L);
+int luaL_settable(struct lua_State* L, int idx);
+int luaL_gettable(struct lua_State* L, int idx);
+int luaL_getglobal(struct lua_State* L);
+
 void luaL_pop(struct lua_State* L);
 int luaL_stacksize(struct lua_State* L);
 
