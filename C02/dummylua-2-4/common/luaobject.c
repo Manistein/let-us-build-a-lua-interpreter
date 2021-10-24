@@ -23,7 +23,12 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 const TValue luaO_nilobject_ = { {NULL}, LUA_TNIL };
 
 int luaO_ceillog2(int value) {
-    int x = 0;
-    for (; value > (int)pow(2, x); x ++);
-    return x;
+    int i = 0;
+
+    for (; i < 32; i++) {
+        if ((int)pow(2, i) >= value)
+            return i;
+    }
+
+    return i;
 }

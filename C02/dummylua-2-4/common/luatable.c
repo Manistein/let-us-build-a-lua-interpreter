@@ -340,10 +340,12 @@ static int numshash(struct Table* t, int* nums) {
 
             if (ttisinteger(getkey(n))) {
                 lua_Integer ikey = getkey(n)->value_.i;
-                int temp = luaO_ceillog2(ikey);
+                if (ikey > 0) {
+                    int temp = luaO_ceillog2(ikey);
 
-                if (temp < MAXABITS + 1 && temp >= 0)
-                    nums[temp] ++;
+                    if (temp < MAXABITS + 1 && temp >= 0)
+                        nums[temp] ++;
+                }
             }
         }
     }
