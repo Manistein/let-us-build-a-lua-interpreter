@@ -3,13 +3,13 @@ cmake_minimum_required(VERSION 3.5.1)
 # set the project name
 project(dummylua)
 
-set(COMMON_SRC common/luabase.c common/luainit.c common/luamem.c common/luaobject.c \
+set(COMMON_SRC common/luabase.c common/luainit.c common/luamem.c common/luaobject.c
 	common/luastate.c common/luastring.c common/luatable.c)
 set(CLIB_SRC clib/luaaux.c)
 set(VM_SRC vm/luado.c vm/luagc.c vm/luavm.c vm/luafunc.c vm/luaopcodes.c)
 set(COMPILER_SRC compiler/luazio.c compiler/lualexer.c compiler/luaparser.c compiler/luacode.c)
 set(TEST_SRC test/p1_test.c test/p2_test.c test/p3_test.c test/p4_test.c test/p5_test.c)
-set(SRC ${COMMON_SRC} ${CLIB_SRC} ${VM_SRC} ${TEST_SRC})
+set(SRC ${COMMON_SRC} ${CLIB_SRC} ${VM_SRC} ${TEST_SRC} ${COMPILER_SRC})
 
 # add the executable
 add_executable(dummylua main.c ${SRC})
