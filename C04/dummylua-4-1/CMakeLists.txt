@@ -14,6 +14,10 @@ set(SRC ${COMMON_SRC} ${CLIB_SRC} ${VM_SRC} ${TEST_SRC} ${COMPILER_SRC})
 # add the executable
 add_executable(dummylua main.c ${SRC})
 
+IF(NOT WIN32)
+	target_link_libraries(dummylua m)
+ENDIF()
+
 IF (WIN32)
 	target_compile_definitions(dummylua PRIVATE _WINDOWS_PLATFORM_=1)
 ENDIF()
