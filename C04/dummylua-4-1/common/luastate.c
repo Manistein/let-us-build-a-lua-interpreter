@@ -161,7 +161,7 @@ void lua_close(struct lua_State* L) {
     (*g->frealloc)(g->ud, fromstate(L1), sizeof(LG), 0);
 }
 
-void setivalue(StkId target, int integer) {
+void setivalue(StkId target, lua_Integer integer) {
     target->value_.i = integer;
     target->tt_ = LUA_NUMINT;
 }
@@ -171,7 +171,7 @@ void setfvalue(StkId target, lua_CFunction f) {
     target->tt_ = LUA_TLCF;
 }
 
-void setfltvalue(StkId target, float number) {
+void setfltvalue(StkId target, lua_Number number) {
     target->value_.n = number;
     target->tt_ = LUA_NUMFLT;
 }
@@ -230,7 +230,7 @@ void lua_pushCclosure(struct lua_State* L, lua_CFunction f, int nup)
 	increase_top(L);
 }
 
-void lua_pushinteger(struct lua_State* L, int integer) {
+void lua_pushinteger(struct lua_State* L, lua_Integer integer) {
     setivalue(L->top, integer);
     increase_top(L);
 }
@@ -351,7 +351,7 @@ int lua_remove(struct lua_State* L, int idx)
 int lua_insert(struct lua_State* L, int idx, TValue* v)
 {
 	TValue* o = index2addr(L, idx);
-	TValue* top = L->top - 1;
+	TValue* top = L->top;
 	for (; top > o; top--) {
 		TValue* prev = top - 1;
 		setobj(top, prev);

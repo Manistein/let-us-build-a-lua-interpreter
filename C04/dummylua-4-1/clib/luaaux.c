@@ -92,7 +92,7 @@ int luaL_requiref(struct lua_State* L, const char* name, lua_CFunction func, int
 	return LUA_OK;
 }
 
-void luaL_pushinteger(struct lua_State* L, int integer) {
+void luaL_pushinteger(struct lua_State* L, lua_Integer integer) {
     lua_pushinteger(L, integer);
 }
 

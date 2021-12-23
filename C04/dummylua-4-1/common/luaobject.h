@@ -32,6 +32,8 @@ typedef unsigned char lu_byte;
 typedef int (*lua_CFunction)(lua_State* L);
 typedef void* (*lua_Alloc)(void* ud, void* ptr, size_t osize, size_t nsize);
 
+#define MAXABITS (sizeof(int) * CHAR_BIT - 1)
+
 // lua number type 
 #define LUA_NUMINT (LUA_TNUMBER | (0 << 4))
 #define LUA_NUMFLT (LUA_TNUMBER | (1 << 4))
@@ -68,8 +70,9 @@ typedef void* (*lua_Alloc)(void* ud, void* ptr, size_t osize, size_t nsize);
     (n <= cast(lua_Number, INT_MAX)) && \
     ((*p = cast(lua_Integer, n)), 1)
 
+#define ttisnumber(o) ((o)->tt_ == LUA_TNUMBER)
 #define ttisinteger(o) ((o)->tt_ == LUA_NUMINT)
-#define ttisnumber(o) ((o)->tt_ == LUA_NUMFLT)
+#define ttisfloat(o) ((o)->tt_ == LUA_NUMFLT)
 #define ttisshrstr(o) ((o)->tt_ == LUA_SHRSTR)
 #define ttislngstr(o) ((o)->tt_ == LUA_LNGSTR)
 #define ttisdeadkey(o) ((o)->tt_ == LUA_TDEADKEY)
@@ -197,6 +200,7 @@ typedef union Closure {
 	CClosure c;
 } Closure;
 
-int luaO_ceillog2(int value);
+int luaO_ceillog2(lua_Integer value);
+int luaO_arith(struct lua_State* L, int op, TValue* v1, TValue* v2); // the result will store in v1
 
 #endif 

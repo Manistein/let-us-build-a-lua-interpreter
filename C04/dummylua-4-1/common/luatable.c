@@ -26,7 +26,6 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "../vm/luado.h"
 #include "luaobject.h"
 
-#define MAXABITS (sizeof(int) * CHAR_BIT - 1)
 #define MAXASIZE (1u << MAXABITS)
 
 static int l_hashfloat(lua_Number n) {
@@ -140,7 +139,7 @@ void luaH_free(struct lua_State* L, struct Table* t) {
     luaM_free(L, t, sizeof(struct Table));
 }
 
-const TValue* luaH_getint(struct lua_State* L, struct Table* t, int key) {
+const TValue* luaH_getint(struct lua_State* L, struct Table* t, lua_Integer key) {
     // 1 <= key <= arraysize
     if (cast(unsigned int, key) - 1 < t->arraysize) {
         return cast(const TValue*, &t->array[key - 1]);        
@@ -338,7 +337,7 @@ static int numshash(struct Table* t, int* nums) {
         if ( !ttisnil(getval(n))) {
             totaluse ++;
 
-            if (ttisinteger(getkey(n))) {
+            if (ttisinteger(getkey(n)) && getkey(n)->value_.i > 0) {
                 lua_Integer ikey = getkey(n)->value_.i;
                 int temp = luaO_ceillog2(ikey);
 
@@ -379,7 +378,7 @@ static void rehash(struct lua_State* L, struct Table* t, const TValue* key) {
     totaluse += numshash(t, nums);
 
     totaluse ++;
-    if (ttisinteger(key)) {
+    if (ttisinteger(key) && key->value_.i > 0) {
         int temp = luaO_ceillog2(key->value_.i);
         if (temp < MAXABITS - 1 && temp >= 0)
             nums[temp]++;
@@ -395,8 +394,8 @@ TValue* luaH_newkey(struct lua_State* L, struct Table* t, const TValue* key) {
     }
 
     TValue k;
-    if (ttisnumber(key)) {
-        if (lua_numisnan(key->value_.f)) {
+    if (ttisfloat(key)) {
+        if (lua_numisnan(key->value_.n)) {
             luaD_throw(L, LUA_ERRRUN);
         }
 

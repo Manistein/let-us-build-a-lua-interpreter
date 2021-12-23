@@ -78,8 +78,8 @@ void p1_test_result03() { // nwant = 0; and nresult > 1;
 
 // test case 4
 static int test_main04(struct lua_State* L) {
-    int arg1 = luaL_tointeger(L, 1);
-    int arg2 = luaL_tointeger(L, 2);
+    int arg1 = (int)luaL_tointeger(L, 1);
+    int arg2 = (int)luaL_tointeger(L, 2);
 
     printf("test_main04 arg1:%d arg2:%d\n", arg1, arg2);
 

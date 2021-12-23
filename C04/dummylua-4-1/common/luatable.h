@@ -37,7 +37,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 struct Table* luaH_new(struct lua_State* L);
 void luaH_free(struct lua_State* L, struct Table* t);
 // if luaH_getint return luaO_nilobject, that means key is not exist
-const TValue* luaH_getint(struct lua_State* L, struct Table* t, int key);
+const TValue* luaH_getint(struct lua_State* L, struct Table* t, lua_Integer key);
 int luaH_setint(struct lua_State* L, struct Table* t, int key, const TValue* value);
 
 const TValue* luaH_getshrstr(struct lua_State* L, struct Table* t, struct TString* key);

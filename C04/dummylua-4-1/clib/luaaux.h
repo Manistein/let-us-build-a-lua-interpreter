@@ -35,7 +35,7 @@ void luaL_close(struct lua_State* L);
 void luaL_openlibs(struct lua_State* L);  // open standard libraries
 int luaL_requiref(struct lua_State* L, const char* name, lua_CFunction func, int glb); // try to load module into _LOADED table
 
-void luaL_pushinteger(struct lua_State* L, int integer);
+void luaL_pushinteger(struct lua_State* L, lua_Integer integer);
 void luaL_pushnumber(struct lua_State* L, float number);
 void luaL_pushlightuserdata(struct lua_State* L, void* userdata);
 void luaL_pushnil(struct lua_State* L);

@@ -10,13 +10,14 @@
 #define save_and_next(L, ls, c) save(L, ls, c); ls->current = next(ls)
 #define currIsNewLine(ls) (ls->current == '\n' || ls->current == '\r')
 
+static int llex(LexState* ls, Seminfo* seminfo);
+
 // the sequence must be the same as enum RESERVED
 const char* luaX_tokens[] = {
-	"local", "nil", "true", "false", "end", "then", "if", "elseif", "function"
+	"local", "nil", "true", "false", "end", "then", "if", "elseif", "not", "and", "or", "function"
 };
 
-void luaX_init(struct lua_State* L)
-{
+void luaX_init(struct lua_State* L) {
 	TString* env = luaS_newliteral(L, LUA_ENV);
 	luaC_fix(L, obj2gco(env));
 
@@ -40,6 +41,12 @@ void luaX_setinput(struct lua_State* L, LexState* ls, Zio* z, struct MBuffer* bu
 	ls->t.token = 0;
 	ls->t.seminfo.i = 0;
 	ls->zio = z;
+}
+
+int luaX_lookahead(struct lua_State* L, LexState* ls) {
+	lua_assert(ls->lookahead.token == TK_EOS);
+	ls->lookahead.token = llex(ls, &ls->lookahead.seminfo);
+	return ls->lookahead.token;
 }
 
 // increase line number, skip to next line
@@ -122,6 +129,39 @@ static int read_string(LexState* ls, int delimiter, Seminfo* seminfo) {
 	return TK_STRING;
 }
 
+static bool is_hex_digit(int c) {
+	if (isdigit(c)) {
+		return true;
+	}
+
+	switch (c) {
+	case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
+	case 'A': case 'B': case 'C': case 'D': case 'E': case 'F': {
+		return true;
+	} break;
+	default:break;
+	}
+
+	return false;
+}
+
+static int str2hex(LexState* ls) {
+	int num_part_count = 0;
+	while (is_hex_digit(ls->current)) {
+		save_and_next(ls->L, ls, ls->current);
+		num_part_count++;
+	}
+	save(ls->L, ls, '\0');
+
+	if (num_part_count <= 0) {
+		LUA_ERROR(ls->L, "malformed number near '0x'");
+		luaD_throw(ls->L, LUA_ERRLEXER);
+	}
+
+	ls->t.seminfo.i = strtoll(ls->buff->buffer, NULL, 0);
+	return TK_INT;
+}
+
 static int str2number(LexState* ls, bool has_dot) {
 	if (has_dot) {
 		save(ls->L, ls, '0');
@@ -145,7 +185,7 @@ static int str2number(LexState* ls, bool has_dot) {
 		return TK_FLOAT;
 	}
 	else {
-		ls->t.seminfo.i = atoi(ls->buff->buffer);
+		ls->t.seminfo.i = atoll(ls->buff->buffer);
 		return TK_INT;
 	}
 }
@@ -223,7 +263,7 @@ static int llex(LexState* ls, Seminfo* seminfo) {
 				}
 			}
 			else {
-				return TK_DOT;
+				return '.';
 			}
 		}
 		case '"': case '\'': { // process string
@@ -298,12 +338,22 @@ static int llex(LexState* ls, Seminfo* seminfo) {
 		}
 		case '0': case '1': case '2': case '3': case '4':
 		case '5': case '6': case '7': case '8': case '9': {
+			if (ls->current == '0') {
+				save_and_next(ls->L, ls, ls->current);
+				if (ls->current == 'x' || ls->current == 'X') {
+					save_and_next(ls->L, ls, ls->current);
+					return str2hex(ls);
+				}
+				else {
+					return str2number(ls, false);
+				}
+			}
 			return str2number(ls, false);
 		}
 		default: {
 			// TK_NAME or reserved name
 			if (isalpha(ls->current) || ls->current == '_') {
-				while (isalpha(ls->current) || ls->current == '_') {
+				while (isalpha(ls->current) || ls->current == '_' || isdigit(ls->current)) {
 					save_and_next(ls->L, ls, ls->current);
 				}
 				save(ls->L, ls, '\0');
@@ -330,6 +380,12 @@ static int llex(LexState* ls, Seminfo* seminfo) {
 }
 
 int luaX_next(struct lua_State* L, LexState* ls) {
+	if (ls->lookahead.token != TK_EOS) {
+		ls->t.token = ls->lookahead.token;
+		ls->lookahead.token = TK_EOS;
+		return ls->t.token;
+	}
+
 	ls->t.token = llex(ls, &ls->t.seminfo);
 	return ls->t.token;
 }

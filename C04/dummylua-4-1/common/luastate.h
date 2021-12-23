@@ -119,9 +119,9 @@ union GCUnion {
 struct lua_State* lua_newstate(lua_Alloc alloc, void* ud);
 void lua_close(struct lua_State* L);
 
-void setivalue(StkId target, int integer);
+void setivalue(StkId target, lua_Integer integer);
 void setfvalue(StkId target, lua_CFunction f);
-void setfltvalue(StkId target, float number);
+void setfltvalue(StkId target, lua_Number number);
 void setbvalue(StkId target, bool b);
 void setnilvalue(StkId target);
 void setpvalue(StkId target, void* p);
@@ -134,7 +134,7 @@ void setobj(StkId target, StkId value);
 void increase_top(struct lua_State* L);
 void lua_pushcfunction(struct lua_State* L, lua_CFunction f);
 void lua_pushCclosure(struct lua_State* L, lua_CFunction f, int nup);
-void lua_pushinteger(struct lua_State* L, int integer);
+void lua_pushinteger(struct lua_State* L, lua_Integer integer);
 void lua_pushnumber(struct lua_State* L, float number);
 void lua_pushboolean(struct lua_State* L, bool b);
 void lua_pushnil(struct lua_State* L);

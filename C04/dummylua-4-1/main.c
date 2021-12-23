@@ -1,10 +1,10 @@
-#include "test/p5_test.h"
+#include "test/p6_test.h"
 #ifdef _WINDOWS_PLATFORM_
 #include <process.h>
 #endif
 
 int main(int argc, char** argv) {
-	p5_test_main();
+	p6_test_main();
 
 #ifdef _WINDOWS_PLATFORM_
 	system("pause");

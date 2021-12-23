@@ -38,6 +38,9 @@ enum RESERVED {
 	TK_THEN,
 	TK_IF,
 	TK_ELSEIF,
+	TK_NOT,
+	TK_AND,
+	TK_OR,
 	TK_FUNCTION,
 
 	/* other token */
@@ -78,6 +81,7 @@ typedef struct LexState {
     int current;	// current char in file
 	struct MBuffer* buff;	// we cache a series of characters into buff, and recognize which token it is
 	Token t;		// current token
+	Token lookahead;
 	int linenumber;
 	struct Dyndata* dyd;
 	struct FuncState* fs;
@@ -89,6 +93,7 @@ typedef struct LexState {
 
 void luaX_init(struct lua_State* L);
 void luaX_setinput(struct lua_State* L, LexState* ls, Zio* z, struct MBuffer* buffer, struct Dyndata* dyd, TString* source, TString* env);
+int luaX_lookahead(struct lua_State* L, LexState* ls);
 int luaX_next(struct lua_State* L, LexState* ls);
 void luaX_syntaxerror(struct lua_State* L, LexState* ls, const char* error_text);
 
