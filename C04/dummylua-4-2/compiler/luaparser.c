@@ -693,8 +693,6 @@ LClosure* luaY_parser(struct lua_State* L, Zio* zio, MBuffer* buffer, Dyndata* d
 	LexState ls;
 	luaX_setinput(L, &ls, zio, buffer, dyd, luaS_newliteral(L, name), luaS_newliteral(L, LUA_ENV));
 	ls.current = zget(ls.zio);
-
-	test_lexer(L, &ls);
 	
 	LClosure* closure = luaF_newLclosure(L, 1);
 	closure->p = fs.p = luaF_newproto(L);
