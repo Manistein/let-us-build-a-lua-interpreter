@@ -7,7 +7,7 @@
 
 #define get_instruction(fs, e) (fs->p->code[e->u.info])
 #define NO_JUMP -1
-#define NO_REG MAXARG_A
+#define NO_REG -1
 
 #define luaK_codeAsBx(fs, c, a, sbx) luaK_codeABx(fs, c, a, sbx + LUA_IBIAS)
 
@@ -25,6 +25,7 @@ int luaK_boolK(FuncState* fs, int v);
 int luaK_ret(FuncState* fs, int first, int nret);
 void luaK_self(FuncState* fs, expdesc* e, expdesc* key);
 int luaK_jump(FuncState* fs, expdesc* e);
+int luaK_patchclose(FuncState* fs, int list, int dtarget, int reg, int vtarget);
 
 void luaK_concat(FuncState* fs, int* l1, int l2);
 void luaK_patchtohere(FuncState* fs, int pc);

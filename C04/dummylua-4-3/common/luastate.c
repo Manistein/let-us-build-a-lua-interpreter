@@ -205,6 +205,7 @@ void setcclosure(StkId target, struct CClosure* cc)
 {
 	union GCUnion* gcu = cast(union GCUnion*, cc);
 	setgco(target, &gcu->gc);
+	target->tt_ = LUA_TCCL;
 }
 
 void setobj(StkId target, StkId value) {

@@ -49,4 +49,6 @@ const lu_byte luaP_opmodes[NUM_OPCODES] = {
 	,opmode(0, 1, OpArgU, OpArgU, iABC) // OP_NEWTABLE
 	,opmode(0, 1, OpArgU, OpArgU, iABC) // OP_SETLIST
 	,opmode(0, 1, OpArgR, OpArgR, iABC) // OP_SETTABLE
+	,opmode(0, 1, OpArgU, OpArgU, iAsBx)// OP_FORPREP
+	,opmode(1, 1, OpArgU, OpArgU, iAsBx)// OP_FORLOOP
 };

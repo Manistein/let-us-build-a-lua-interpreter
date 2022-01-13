@@ -14,7 +14,12 @@ static int llex(LexState* ls, Seminfo* seminfo);
 
 // the sequence must be the same as enum RESERVED
 const char* luaX_tokens[] = {
-	"local", "nil", "true", "false", "end", "then", "if", "elseif", "not", "and", "or", "function"
+	"local", "nil",  "true", "false", 
+	"end",   "then", "if",   "elseif", 
+	"else",  "not",  "and",  "or", 
+	"do",    "for",  "in",   "while", 
+	"repeat","until","break","return",
+	"function"
 };
 
 void luaX_init(struct lua_State* L) {

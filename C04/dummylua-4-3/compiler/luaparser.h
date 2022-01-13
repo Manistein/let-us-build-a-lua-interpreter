@@ -104,18 +104,39 @@ typedef struct MBuffer {
 	int size;
 } MBuffer;
 
+typedef struct Labeldesc {
+	struct TString* varname;
+	int pc;
+	int line;
+} Labeldesc;
+
+typedef struct Labellist {
+	struct Labeldesc* arr;
+	int n;
+	int size;
+} Labellist;
+
 typedef struct Dyndata {
 	struct {
 		short* arr;
 		int n;
 		int size;
 	} actvar;
+	Labellist labellist;
 } Dyndata;
+
+typedef struct BlockCnt {
+	struct BlockCnt* previous;
+	lu_byte nactvar;
+	int is_loop;
+	int firstlabel;
+} BlockCnt;
 
 typedef struct FuncState {
 	int firstlocal;
 	struct FuncState* prev;
 	struct LexState* ls;
+	struct BlockCnt* bl;
 	Proto* p;
 	int pc;				// next code array index to save instruction
 	int jpc;			// the position of the first test instruction

@@ -81,8 +81,10 @@ void luaD_growstack(struct lua_State* L, int size) {
     while(ci) {
         int func_diff = cast(int, ci->func - old_stack);
         int top_diff = cast(int, ci->top - old_stack);
+		int luabase_diff = cast(int, ci->l.base - old_stack);
         ci->func = restorestack(L, func_diff);
         ci->top = restorestack(L, top_diff);
+		ci->l.base = restorestack(L, luabase_diff);
 
         ci = ci->next;
     }
@@ -209,25 +211,21 @@ int luaD_poscall(struct lua_State* L, StkId first_result, int nresult) {
         } break;
         case 1: {
             if (nresult == 0) {
-                first_result->value_.p = NULL;
-                first_result->tt_ = LUA_TNIL;
+				setnilvalue(first_result);
             }
             setobj(func, first_result);
-            first_result->value_.p = NULL;
-            first_result->tt_ = LUA_TNIL;
+			setnilvalue(first_result);
 
             L->top = func + nwant;
         } break;
         case LUA_MULRET: {
-            int nres = cast(int, L->top - first_result);
             int i;
-            for (i = 0; i < nres; i++) {
+            for (i = 0; i < nresult; i++) {
                 StkId current = first_result + i;
                 setobj(func + i, current);
-                current->value_.p = NULL;
-                current->tt_ = LUA_TNIL;
+				setnilvalue(current);
             }
-            L->top = func + nres;
+            L->top = func + nresult;
         } break;
         default: {
             if (nwant > nresult) {
@@ -236,12 +234,11 @@ int luaD_poscall(struct lua_State* L, StkId first_result, int nresult) {
                     if (i < nresult) {
                         StkId current = first_result + i;
                         setobj(func + i, current);
-                        current->value_.p = NULL;
-                        current->tt_ = LUA_TNIL;
+						setnilvalue(current);
                     }
                     else {
                         StkId stack = func + i;
-                        stack->tt_ = LUA_TNIL;
+						setnilvalue(stack);
                     }
                 }
                 L->top = func + nwant;
@@ -252,13 +249,11 @@ int luaD_poscall(struct lua_State* L, StkId first_result, int nresult) {
                     if (i < nwant) {
                         StkId current = first_result + i;
                         setobj(func + i, current);
-                        current->value_.p = NULL;
-                        current->tt_ = LUA_TNIL;
+						setnilvalue(current);
                     }
                     else {
                         StkId stack = func + i;
-                        stack->value_.p = NULL;
-                        stack->tt_ = LUA_TNIL; 
+						setnilvalue(stack);
                     }
                 }
                 L->top = func + nresult;
@@ -389,6 +384,8 @@ int luaD_protectedparser(struct lua_State* L, Zio* z, const char* filename) {
 	p.buffer.buffer = NULL;
 	p.dyd.actvar.size = p.buffer.size = 0;
 	p.dyd.actvar.n = p.buffer.n = 0;
+	p.dyd.labellist.arr = NULL;
+	p.dyd.labellist.n = p.dyd.labellist.size = 0;
 
 	int status = luaD_pcall(L, f_parser, (void*)(&p), savestack(L, L->top), L->errorfunc);
 	if (status != LUA_OK) {
@@ -396,7 +393,7 @@ int luaD_protectedparser(struct lua_State* L, Zio* z, const char* filename) {
 		return LUA_ERRERR;
 	}
 
-	luaM_free(L, p.dyd.actvar.arr, p.dyd.actvar.size);
-	luaM_free(L, p.buffer.buffer, p.buffer.size);
+	luaM_free(L, p.dyd.actvar.arr, p.dyd.actvar.size * sizeof(short));
+	luaM_free(L, p.buffer.buffer, p.buffer.size * sizeof(char));
 	return LUA_OK;
 }

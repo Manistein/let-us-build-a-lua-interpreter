@@ -88,7 +88,8 @@ int luaV_eqobject(struct lua_State* L, const TValue* a, const TValue* b) {
 static void newframe(struct lua_State* L);
 static void op_move(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	int reg_b = GET_ARG_B(i);
-	setobj(ra, L->ci->l.base + reg_b);
+	StkId o = L->ci->l.base + reg_b;
+	setobj(ra, o);
 }
 
 static void op_loadk(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
@@ -97,7 +98,14 @@ static void op_loadk(struct lua_State* L, LClosure* cl, StkId ra, Instruction i)
 }
 
 static void op_getupval(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	setobj(ra, cl->upvals[GET_ARG_B(i)]->v);
+	UpVal* upval = cl->upvals[GET_ARG_B(i)];
+	if (upval) {
+		setobj(ra, upval->v);
+	}
+	else {
+		printf("op_getupval:upval is not exist");
+		luaD_throw(L, LUA_ERRRUN);
+	}
 }
 
 static void op_gettabup(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
@@ -125,9 +133,7 @@ static void op_call(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) 
 	}
 
 	if (luaD_precall(L, ra, nresult)) { // c function
-		if (nresult >= 0) {
-			L->top = L->ci->top;
-		}
+		L->top = L->ci->top;
 	}
 	else {
 		newframe(L);
@@ -138,7 +144,9 @@ static void op_return(struct lua_State* L, LClosure* cl, StkId ra, Instruction i
 	int b = GET_ARG_B(i);
 	luaD_poscall(L, ra, b ? (b - 1) : (int)(L->top - ra));
 	if (L->ci->callstatus & CIST_LUA) {
-		L->top = L->ci->top;
+		//if (b) {
+		//	L->top = L->ci->top;
+		//}
 		lua_assert(GET_OPCODE(*(L->ci->savedpc - 1)) == OP_CALL);
 	}
 }
@@ -314,12 +322,14 @@ static void binop(struct lua_State* L, LClosure* cl, StkId ra, Instruction i, in
 		rc = L->ci->l.base + c;
 	}
 
-	if (!luaO_arith(L, op, rb, rc)) {
+	TValue o;
+	setobj(&o, rb);
+	if (!luaO_arith(L, op, &o, rc)) {
 		// TODO throw exception
 		printf("binop: rb's type is incorrect. type is %d", op);
 		luaD_throw(L, LUA_ERRRUN);
 	}
-	setobj(ra, rb);
+	setobj(ra, &o);
 }
 
 static void op_add(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
@@ -377,13 +387,6 @@ static void op_concat(struct lua_State* L, LClosure* cl, StkId ra, Instruction i
 static void op_eq(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	StkId rb = RK(L, cl, GET_ARG_B(i));
 	StkId rc = RK(L, cl, GET_ARG_C(i));
-
-	lua_Number nb, nc;
-	if (!luaV_tonumber(L, rb, &nb) || !luaV_tonumber(L, rc, &nc)) {
-		// TODO throw exception
-		printf("op_lt: rb or rc is not number");
-		luaD_throw(L, LUA_ERRRUN);
-	}
 
 	if (luaV_eqobject(L, rb, rc) != GET_ARG_A(i))
 		L->ci->l.savedpc++;
@@ -508,6 +511,93 @@ static void op_settable(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 
 	TValue* val = luaH_set(L, t, rb);
 	setobj(val, rc);
+}
+
+static void op_forprep(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
+	StkId step_ptr = ra + 2;
+	if (!ttisinteger(step_ptr) && !ttisfloat(step_ptr)) {
+		printf("op_forprep:step type error");
+		luaD_throw(L, LUA_ERRRUN);
+	}
+	
+	int arith_ret = luaO_arith(L, LUA_OPT_SUB, ra, step_ptr);
+	if (!arith_ret) {
+		printf("op_forprep:arith error");
+		luaD_throw(L, LUA_ERRRUN);
+	}
+
+	int sbx = GET_ARG_sBx(i);
+	L->ci->l.savedpc += sbx;
+}
+
+static void op_forloop(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
+	StkId limit = ra + 1;
+	StkId step_ptr = ra + 2;
+	StkId local_var = ra + 3;
+
+	lua_assert(ttisinteger(limit) || ttisfloat(limit));
+	lua_assert(ttisinteger(step_ptr) || ttisfloat(step_ptr));
+
+	int arith_ret = luaO_arith(L, LUA_OPT_ADD, ra, step_ptr);
+	if (!arith_ret) {
+		printf("op_forloop:arith error");
+		luaD_throw(L, LUA_ERRRUN);
+	}
+
+	lua_Number v1, v2, v3;
+	luaV_tonumber(L, ra, &v1);
+	luaV_tonumber(L, limit, &v2);
+	luaV_tonumber(L, step_ptr, &v3);
+	int sbx = GET_ARG_sBx(i);
+
+	if (v3 >= 0) {
+		if (v1 <= v2) {
+			L->ci->l.savedpc += sbx;
+			setobj(local_var, ra);
+		}
+	}
+	else {
+		if (v1 >= v2) {
+			L->ci->l.savedpc += sbx;
+			setobj(local_var, ra);
+		}
+	}
+}
+
+static void op_tforcall(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
+	StkId temp_ra3 = ra + 3;
+	StkId temp_ra4 = ra + 4;
+	StkId temp_ra5 = ra + 5;
+
+	setobj(temp_ra3, ra);
+	setobj(temp_ra4, ra + 1);
+	setobj(temp_ra5, ra + 2);
+	L->top = ra + 6;
+
+	if (luaD_precall(L, temp_ra3, 2)) { // is c call?
+		L->top = L->ci->top;
+	}
+	else {
+		newframe(L);
+	}
+}
+
+static void op_tforloop(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
+	int sbx = GET_ARG_sBx(i);
+	if (!ttisnil((ra + 1))) {
+		setobj(ra, ra + 1);
+		L->ci->l.savedpc += sbx;
+	}
+}
+
+static void op_closure(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
+	Proto* proto = cl->p->p[GET_ARG_Bx(i)];
+	LClosure* new_cl = luaF_newLclosure(L, proto->sizeupvalues);
+	new_cl->p = proto;
+	setgco(ra, obj2gco(new_cl));
+
+	// TODO we just ignore upvalues in this version
+	new_cl->upvals[0] = cl->upvals[0];
 }
 
 int luaV_tonumber(struct lua_State* L, const TValue* v, lua_Number* n) {
@@ -668,6 +758,21 @@ static bool vmexecute(struct lua_State* L, StkId ra, Instruction i) {
 	case OP_SETTABLE: {
 		op_settable(L, cl, ra, i);
 	} break;
+	case OP_FORPREP: {
+		op_forprep(L, cl, ra, i);
+	} break;
+	case OP_FORLOOP: {
+		op_forloop(L, cl, ra, i);
+	} break;
+	case OP_TFORCALL: {
+		op_tforcall(L, cl, ra, i);
+	} break;
+	case OP_TFORLOOP: {
+		op_tforloop(L, cl, ra, i);
+	} break;
+	case OP_CLOSURE: {
+		op_closure(L, cl, ra, i);
+	} break;
 	case OP_RETURN: {
 		op_return(L, cl, ra, i);
 		is_loop = false;
@@ -738,6 +843,11 @@ static char* code2name[] = {
 	"OP_NEWTABLE",
 	"OP_SETLIST",
 	"OP_SETTABLE",
+	"OP_FORPREP",
+	"OP_FORLOOP",
+	"OP_TFORCALL",
+	"OP_TFORLOOP",
+	"OP_CLOSURE"
 };
 
 static void print_Instruction(int idx, Instruction i) {
@@ -759,8 +869,9 @@ static void newframe(struct lua_State* L) {
 	// print table k
 	struct GCObject* gco = gcvalue(L->ci->func);
 	LClosure* cl = gco2lclosure(gco);
-	printf("k:");
+	printf("k=>");
 	for (int i = 0; i < cl->p->sizek; i++) {
+		printf("[%d]:", i);
 		print_TValue(&cl->p->k[i]);
 	}
 	printf("\n");

@@ -31,7 +31,7 @@ static int addk(FuncState* fs, TValue* v) {
 	}
 
 	int k = fs->nk;
-	luaM_growvector(ls->L, p->k, fs->nk, p->sizek, TValue, INT_MAX);
+	luaM_growvector(ls->L, p->k, fs->nk + 1, p->sizek, TValue, INT_MAX);
 	setobj(&p->k[k], v);
 	setivalue(idx, k);
 
@@ -226,7 +226,7 @@ static void codecmp(FuncState* fs, int op, expdesc* e1, expdesc* e2) {
 		luaK_codeABC(fs, OP_EQ, 0, e1->u.info, e2->u.info);
 	} break;
 	case BINOPR_GREATER: {
-		luaK_codeABC(fs, OP_LT, 0, e1->u.info, e2->u.info);
+		luaK_codeABC(fs, OP_LE, 0, e1->u.info, e2->u.info);
 	} break;
 	case BINOPR_LESS: {
 		luaK_codeABC(fs, OP_LT, 1, e1->u.info, e2->u.info);
@@ -302,7 +302,8 @@ void luaK_storevar(FuncState* fs, expdesc* var, expdesc* ex) {
 	} break;
 	case VINDEXED: {
 		int e = luaK_exp2RK(fs, ex);
-		luaK_codeABC(fs, OP_SETTABUP, var->u.ind.t, var->u.ind.idx, e);
+		int opcode = var->u.ind.vt == VLOCAL ? OP_SETTABLE : OP_SETTABUP;
+		luaK_codeABC(fs, opcode, var->u.ind.t, var->u.ind.idx, e);
 	} break;
 	default:break;
 	}
@@ -370,7 +371,7 @@ int luaK_boolK(FuncState* fs, int v) {
 }
 
 int luaK_ret(FuncState* fs, int first, int nret) {
-	luaK_codeABC(fs, OP_RETURN, first, nret + 1, 0);
+	luaK_codeABC(fs, OP_RETURN, first, nret == LUA_MULRET ? 0 : nret + 1, 0);
 	return LUA_OK;
 }
 
@@ -395,6 +396,11 @@ static int condjump(FuncState* fs, expdesc* e, int b) {
 
 int luaK_jump(FuncState* fs, expdesc* e) {
 	return luaK_codeAsBx(fs, OP_JUMP, 0, NO_JUMP);
+}
+
+int luaK_patchclose(FuncState* fs, int list, int dtarget, int reg, int vtarget) {
+	patchlistaux(fs, list, dtarget, reg, vtarget);
+	return 0;
 }
 
 static int jumponcond(FuncState* fs, expdesc* e, int b) {
@@ -517,7 +523,7 @@ void luaK_nil(FuncState* fs, int from, int to) {
 }
 
 static void dischargejpc(FuncState* fs) {
-	patchlistaux(fs, fs->jpc, fs->pc, fs->freereg - 1, fs->pc);
+	patchlistaux(fs, fs->jpc, fs->pc, NO_REG, fs->pc);
 	fs->last_target = fs->pc;
 	fs->jpc = NO_JUMP;
 }
@@ -525,7 +531,7 @@ static void dischargejpc(FuncState* fs) {
 int luaK_codeABC(FuncState* fs, int opcode, int a, int b, int c) {
 	dischargejpc(fs);
 
-	luaM_growvector(fs->ls->L, fs->p->code, fs->pc, fs->p->sizecode, Instruction, INT_MAX);
+	luaM_growvector(fs->ls->L, fs->p->code, fs->pc + 1, fs->p->sizecode, Instruction, INT_MAX);
 	Instruction i = (b << POS_B) | (c << POS_C) | (a << POS_A) | opcode;
 	fs->p->code[fs->pc] = i;
 
@@ -535,7 +541,7 @@ int luaK_codeABC(FuncState* fs, int opcode, int a, int b, int c) {
 int luaK_codeABx(FuncState* fs, int opcode, int a, int bx) {
 	dischargejpc(fs);
 
-	luaM_growvector(fs->ls->L, fs->p->code, fs->pc, fs->p->sizecode, Instruction, INT_MAX);
+	luaM_growvector(fs->ls->L, fs->p->code, fs->pc + 1, fs->p->sizecode, Instruction, INT_MAX);
 	Instruction i = (bx << POS_C) | (a << POS_A) | opcode;
 	fs->p->code[fs->pc] = i;
 
@@ -652,6 +658,17 @@ static int patchtestreg(FuncState* fs, int pc, int reg) {
 
 	if (reg != NO_REG && reg != GET_ARG_A(*i)) {
 		SET_ARG_A(*i, reg);
+	}
+	else {
+		int opcode = GET_OPCODE(*i);
+		int arg_a = GET_ARG_A(*i);
+		int arg_b = GET_ARG_B(*i);
+		int arg_c = GET_ARG_C(*i);
+
+		SET_OPCODE(*i, OP_TEST);
+		SET_ARG_A(*i, arg_b);
+		SET_ARG_B(*i, 0);
+		SET_ARG_C(*i, arg_c);
 	}
 
 	return 1;

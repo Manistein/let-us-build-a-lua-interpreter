@@ -415,12 +415,21 @@ TValue* luaH_newkey(struct lua_State* L, struct Table* t, const TValue* key) {
         Node* other_node = mainposition(L, t, getkey(main_node));
         if (other_node != main_node) {
             // find previous node of main node
-            while(other_node + other_node->key.nk.next != main_node)
-                other_node += other_node->key.nk.next;
+			while (other_node + other_node->key.nk.next != main_node) {
+				assert(other_node->key.nk.next != 0);
+				other_node += other_node->key.nk.next;
+			}
             
             other_node->key.nk.next = lastfree - other_node;
             setobj(getwkey(lastfree), getwkey(main_node));
             setobj(getval(lastfree), getval(main_node));
+			if (main_node->key.nk.next != 0) {
+				Node* main_node_next = main_node + main_node->key.nk.next;
+				lastfree->key.nk.next = main_node_next - lastfree;
+			}
+			else {
+				lastfree->key.nk.next = 0;
+			}
 
             main_node->key.nk.next = 0;
             setnilvalue(getval(main_node));
@@ -453,6 +462,10 @@ static unsigned int arrayindex(struct Table* t, const TValue* key) {
 }
 
 static unsigned int findindex(struct lua_State* L, struct Table* t, const TValue* key) {
+	if (ttisnil(key)) {
+		return 0;
+	}
+
     unsigned int i = arrayindex(t, key);
     if (i != 0 && i <= t->arraysize) {
         return i;

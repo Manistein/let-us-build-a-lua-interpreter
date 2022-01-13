@@ -38,9 +38,18 @@ enum RESERVED {
 	TK_THEN,
 	TK_IF,
 	TK_ELSEIF,
+	TK_ELSE,
 	TK_NOT,
 	TK_AND,
 	TK_OR,
+	TK_DO,
+	TK_FOR,
+	TK_IN,
+	TK_WHILE,
+	TK_REPEAT,
+	TK_UNTIL,
+	TK_BREAK,
+	TK_RETURN,
 	TK_FUNCTION,
 
 	/* other token */

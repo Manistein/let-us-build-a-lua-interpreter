@@ -28,7 +28,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define POS_B (SIZE_C + SIZE_A + SIZE_OP)
 #define POS_C (SIZE_A + SIZE_OP)
 
-#define LUA_IBIAS (1 << (SIZE_B + SIZE_C) / 2)
+#define LUA_IBIAS ((1 << (SIZE_B + SIZE_C) - 1) / 2)
 
 #define BITRK 256
 #define MAININDEXRK (BITRK - 1)
@@ -113,6 +113,14 @@ enum OpCode {
 	OP_SETLIST,     // A B C   R(A)[(C-1)*FPF+i] := R(A+i), 1 <= i <= B
 	OP_SETTABLE,    // A B C   R(A)[RK(B)] = RK(C)
 
+	OP_FORPREP,     // A sBx   FORPREP A sBx R(A) -= R(A+2); PC += sBx
+	OP_FORLOOP,     // A sBx   FORLOOP A sBx R(A) += R(A+2)
+					//         if R(A) < ? = R(A + 1) then {
+					//	          PC += sBx; R(A + 3) = R(A)
+					//         }
+	OP_TFORCALL,    // A C	R(A+3), ... ,R(A+2+C) := R(A)(R(A+1), R(A+2));
+	OP_TFORLOOP,    // A sBx	if R(A+1) ~= nil then { R(A)=R(A+1); pc += sBx }
+	OP_CLOSURE,     // A Bx	R(A) := closure(KPROTO[Bx])
 	NUM_OPCODES,
 };
 

@@ -16,6 +16,13 @@ static int check(struct lua_State* L, LexState* ls, int token);
 static void yindex(struct lua_State* L, FuncState* fs, expdesc* e);
 static int testnext(LexState* ls, int token);
 
+static void adjustlocalvars(struct lua_State* L, LexState* ls, FuncState* fs, int nvars);
+static void removevars(struct lua_State* L, LexState* ls);
+
+static void statlist(struct lua_State* L, LexState* ls, FuncState* fs);
+static void close_func(struct lua_State* L, FuncState* fs);
+static bool block_follow(struct lua_State* L, LexState* ls);
+
 #define eqstr(a, b) ((a) == (b))
 #define vkisvar(v) (v->k >= VLOCAL && v->k <= VINDEXED)
 #define check_condition(ls, c, s) if(!(c)) luaX_syntaxerror(ls->L, ls, s)
@@ -31,7 +38,7 @@ static void init_exp(expdesc* e, expkind k, int i) {
 static int newupvalues(FuncState* fs, expdesc* e, TString* n) {
 	struct lua_State* L = fs->ls->L;
 	Proto* p = fs->p;
-	luaM_growvector(L, p->upvalues, fs->nups, p->sizeupvalues, Upvaldesc, MAXUPVAL);
+	luaM_growvector(L, p->upvalues, fs->nups + 1, p->sizeupvalues, Upvaldesc, MAXUPVAL);
 	
 	for (int i = fs->nups; i < p->sizeupvalues; i++) {
 		p->upvalues[i].idx = 0;
@@ -47,7 +54,9 @@ static int newupvalues(FuncState* fs, expdesc* e, TString* n) {
 }
 
 static void open_func(LexState* ls, FuncState* fs) {
-	fs->firstlocal = 0;
+	fs->bl = NULL;
+
+	fs->firstlocal = ls->dyd->actvar.n;
 	fs->freereg = 0;
 	fs->ls = ls;
 	fs->nactvars = 0;
@@ -70,7 +79,7 @@ static bool test_token(struct lua_State* L, LexState* ls, int token) {
 	return true;
 }
 
-static LocVar* getlocvar(FuncState* fs, int n) {
+static LocVar* getlocalvar(FuncState* fs, int n) {
 	LexState* ls = fs->ls;
 	int idx = ls->dyd->actvar.arr[fs->firstlocal + n];
 	lua_assert(idx < fs->nlocvars);
@@ -80,7 +89,7 @@ static LocVar* getlocvar(FuncState* fs, int n) {
 // search local var for current function
 static int searchvar(FuncState* fs, TString* name) {
 	for (int i = fs->nactvars - 1; i >= 0; i--) {
-		if eqstr(getlocvar(fs, i)->varname, name) {
+		if eqstr(getlocalvar(fs, i)->varname, name) {
 			return i;
 		}
 	}
@@ -418,6 +427,10 @@ static int explist(FuncState* fs, expdesc* e) {
 			expr(fs, e);
 			var++;
 		}
+		else if (test_token(fs->ls->L, fs->ls, ';')) {
+			luaX_next(fs->ls->L, fs->ls);
+			break;
+		}
 		else {
 			break;
 		}
@@ -430,9 +443,10 @@ static void funcargs(FuncState* fs, expdesc* e) {
 	luaX_next(fs->ls->L, fs->ls);
 
 	expdesc args;
+	init_exp(&args, VVOID, 0);
 	int narg = 0;
 	if (fs->ls->t.token == ')') {
-		init_exp(&args, VVOID, 0);
+		// init_exp(&args, VVOID, 0);
 	}
 	else {
 		narg = explist(fs, &args);
@@ -445,8 +459,8 @@ static void funcargs(FuncState* fs, expdesc* e) {
 	lua_assert(e->k == VNONRELOC);
 	int base = e->u.info;
 	int nparams = fs->freereg - (base + 1);
-	init_exp(e, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams + 1, 1));
-	fs->freereg = base + 1;
+	init_exp(e, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams + 1, 0));
+	fs->freereg = base;
 
 	checknext(fs->ls->L, fs->ls, ')');
 }
@@ -528,7 +542,7 @@ static void adjust_assign(FuncState* fs, int nvars, int nexps, expdesc* e) {
 		extra++;
 		if (extra < 0) extra = 0;
 		luaK_setreturns(fs, e, extra);
-		if (extra > 1) luaK_reserveregs(fs, extra - 1);
+		if (extra > 1) luaK_reserveregs(fs, extra);
 	}
 	else {
 		if (e->k != VVOID) luaK_exp2nextreg(fs, e);
@@ -548,6 +562,7 @@ static void assignment(FuncState* fs, LH_assign* v, int nvars) {
 	check_condition(fs->ls, vkisvar(var), "not var");
 
 	LH_assign lh;
+	init_exp(&lh.v, VVOID, 0);
 	lh.prev = v;
 
 	expdesc e;
@@ -571,6 +586,450 @@ static void assignment(FuncState* fs, LH_assign* v, int nvars) {
 	luaK_storevar(fs, &v->v, &e);
 }
 
+static void cond(struct lua_State* L, LexState* ls, FuncState* fs, expdesc* e) {
+	explist(fs, e);
+	if (e->k == VNIL) e->k = VFALSE;
+	luaK_goiftrue(fs, e);
+}
+
+static void enterblock(struct lua_State* L, LexState* ls, BlockCnt* bl, int is_loop) {
+	FuncState* fs = ls->fs;
+	bl->nactvar = fs->nactvars;
+	bl->is_loop = is_loop;
+	bl->previous = fs->bl;
+	fs->bl = bl;
+
+	if (is_loop) {
+		bl->firstlabel = ls->dyd->labellist.n;
+	}
+	else {
+		bl->firstlabel = -1;
+	}
+}
+
+static void breakjump(struct lua_State* L, LexState* ls, BlockCnt* bl) {
+	TString* breakstr = luaS_newliteral(L, "break");
+	for (int i = bl->firstlabel; i < ls->dyd->labellist.n; i++) {
+		Labeldesc* label = &ls->dyd->labellist.arr[i];
+		if (luaS_eqshrstr(L, label->varname, breakstr)) {
+			luaK_patchtohere(ls->fs, label->pc);
+		}
+	}
+	ls->dyd->labellist.n = bl->firstlabel;
+}
+
+static void leaveblock(struct lua_State* L, LexState* ls) {
+	FuncState* fs = ls->fs;
+	BlockCnt* bl = fs->bl;
+
+	removevars(L, ls);
+	fs->nactvars = bl->nactvar;
+	fs->freereg = fs->nactvars;
+	fs->nlocvars = bl->nactvar;
+
+	if (bl->is_loop) {
+		breakjump(L, ls, bl);
+	}
+
+	fs->bl = bl->previous;
+}
+
+static void block(struct lua_State* L, LexState* ls, FuncState* fs, int is_loop) {
+	BlockCnt bl;
+	enterblock(L, ls, &bl, is_loop);
+	statlist(L, ls, fs);
+	leaveblock(L, ls);
+}
+
+static int test_then_part(struct lua_State* L, LexState* ls, expdesc* e, int* escapelist) {
+	FuncState* fs = ls->fs;
+
+	int is_elseif_follow = 0;
+	checknext(L, ls, TK_THEN);
+
+	BlockCnt bl;
+	enterblock(L, ls, &bl, 0);
+	statlist(L, ls, fs);
+	leaveblock(L, ls);
+
+	*escapelist = luaK_jump(fs, e);
+	if (ls->t.token == TK_ELSEIF) {
+		is_elseif_follow = ls->t.token;
+		luaX_next(L, ls);
+	}
+
+	return is_elseif_follow;
+}
+
+static void ifstat(struct lua_State* L, LexState* ls, FuncState* fs) {
+	luaX_next(L, ls); // skip if
+
+	expdesc e;
+	init_exp(&e, VVOID, 0);
+	cond(L, ls, fs, &e);  // cond part
+	lua_assert(e.f != NO_JUMP);
+	int condjmp = e.f;
+	e.f = NO_JUMP;
+	int escapelist = NO_JUMP;
+
+	int is_elseif_follow = test_then_part(L, ls, &e, &escapelist);
+	while (is_elseif_follow) {
+		luaK_patchtohere(fs, condjmp);
+		cond(L, ls, fs, &e);
+		condjmp = e.f;
+
+		int escape = NO_JUMP;
+		is_elseif_follow = test_then_part(L, ls, &e, &escape);
+		luaK_concat(fs, &escapelist, escape);
+	}
+
+	luaK_patchtohere(fs, condjmp);
+	if (ls->t.token == TK_ELSE) {
+		luaX_next(L, ls);
+		block(L, ls, fs, 0);
+	}
+
+	luaK_patchtohere(fs, escapelist);
+	checknext(L, ls, TK_END);
+}
+
+static void dostat(struct lua_State* L, LexState* ls, FuncState* fs) {
+	checknext(L, ls, TK_DO);
+	block(L, ls, fs, 0);
+	checknext(L, ls, TK_END);
+}
+
+static void new_localvar(struct lua_State* L, LexState* ls, TString* varname) {
+	FuncState* fs = ls->fs;
+	luaM_growvector(L, fs->p->locvars, fs->nlocvars + 1, fs->p->sizelocvar, LocVar, MAXLOCALVAR);
+	for (int i = fs->nlocvars; i < fs->p->sizelocvar; i++) {
+		fs->p->locvars[i].varname = NULL;
+	}
+	fs->p->locvars[fs->nlocvars].varname = varname;
+	
+	luaM_growvector(L, ls->dyd->actvar.arr, ls->dyd->actvar.n + 1, ls->dyd->actvar.size, short, INT_MAX);
+	ls->dyd->actvar.arr[ls->dyd->actvar.n++] = fs->nlocvars;
+
+	fs->nlocvars++;
+}
+
+static void adjustlocalvars(struct lua_State* L, LexState* ls, FuncState* fs, int nvars) {
+	fs->nactvars = fs->nactvars + nvars;
+	for (int i = nvars; i > 0; i--) {
+		getlocalvar(fs, i - 1)->startpc = fs->pc;
+	}
+}
+
+static void removevars(struct lua_State* L, LexState* ls) {
+	FuncState* fs = ls->fs;
+	BlockCnt* bl = fs->bl;
+	ls->dyd->actvar.n -= fs->nactvars - bl->nactvar;
+	for (; fs->nactvars > bl->nactvar; fs->nactvars--) {
+		getlocalvar(fs, fs->nactvars - 1)->endpc = fs->pc;
+	}
+}
+
+static void localstat(struct lua_State* L, LexState* ls, FuncState* fs) {
+	// restore local vars
+	int nvars = 0;
+	do {
+		nvars++;
+
+		luaX_next(L, ls);
+		check(L, ls, TK_NAME);
+		new_localvar(L, ls, ls->t.seminfo.s);
+		luaX_next(L, ls);
+	} while (ls->t.token == ',');
+	
+	if (ls->t.token == '=') {
+		luaX_next(L, ls);
+
+		expdesc e;
+		init_exp(&e, VVOID, 0);
+		int nexps = explist(fs, &e);
+
+		adjust_assign(fs, nvars, nexps, &e);
+	}
+	else {
+		luaK_nil(fs, fs->freereg, fs->freereg + nvars);
+		luaK_reserveregs(fs, nvars);
+	}
+
+	adjustlocalvars(L, ls, fs, nvars);
+}
+
+static void whilestat(struct lua_State* L, LexState* ls, FuncState* fs) {
+	luaX_next(L, ls); // skip TK_WHILE
+	
+	int whileinit = fs->pc;
+
+	expdesc e;
+	init_exp(&e, VVOID, 0);
+	cond(L, ls, fs, &e);
+	int condjmp = e.f;
+	e.f = NO_JUMP;
+
+	checknext(L, ls, TK_DO);
+	BlockCnt bl;
+	enterblock(L, ls, &bl, 1);
+	statlist(L, ls, fs);
+	int escapelist = luaK_jump(fs, NULL);
+	luaK_patchclose(fs, escapelist, whileinit, NO_REG, whileinit);
+	leaveblock(L, ls);	
+	checknext(L, ls, TK_END);
+
+	luaK_patchtohere(fs, condjmp);
+}
+
+static void forbody(struct lua_State* L, LexState* ls, FuncState* fs, int is_num) {
+	luaX_next(L, ls); // skip do
+
+	int offset = is_num ? 4 : 5; // offset from init pos or generator
+
+	BlockCnt bl;
+	enterblock(L, ls, &bl, 1);
+	adjustlocalvars(L, ls, fs, offset);
+	int ra = fs->freereg - offset;
+	int loop_init = fs->pc;
+	int jmp = is_num ? luaK_codeAsBx(fs, OP_FORPREP, ra, NO_JUMP) : luaK_jump(fs, NULL);
+	statlist(L, ls, fs);
+	if (is_num) {
+		luaK_patchtohere(fs, jmp);
+		luaK_codeAsBx(fs, OP_FORLOOP, ra, loop_init - fs->pc);
+	}
+	else {
+		luaK_patchtohere(fs, jmp);
+		luaK_codeABC(fs, OP_TFORCALL, ra, 0, 2);
+		luaK_codeAsBx(fs, OP_TFORLOOP, fs->freereg - 3, loop_init - fs->pc);
+	}
+	leaveblock(L, ls);
+
+	checknext(L, ls, TK_END);
+}
+
+static void fornum(struct lua_State* L, LexState* ls, FuncState* fs, TString* varname) {
+	luaX_next(L, ls); // skip '='
+
+	new_localvar(L, ls, luaS_newliteral(L, "(for init)"));
+	new_localvar(L, ls, luaS_newliteral(L, "(for limit)"));
+	new_localvar(L, ls, luaS_newliteral(L, "(for step)"));
+	new_localvar(L, ls, varname);
+
+	expdesc e;
+	init_exp(&e, VVOID, 0);
+	expr(fs, &e);
+	luaK_exp2nextreg(fs, &e);
+
+	checknext(L, ls, ',');
+	expr(fs, &e);
+	luaK_exp2nextreg(fs, &e);
+
+	if (ls->t.token == ',') {
+		luaX_next(L, ls); // skip ','
+		expr(fs, &e);
+		luaK_exp2nextreg(fs, &e);
+	}
+	else { 
+		init_exp(&e, VINT, 1);
+		luaK_exp2nextreg(fs, &e);
+	}
+
+	luaK_codeABC(fs, OP_MOVE, fs->freereg, fs->freereg - 3, 0);
+	luaK_reserveregs(fs, 1);
+
+	check(L, ls, TK_DO);
+	forbody(L, ls, fs, 1);
+}
+
+static void forlist(struct lua_State* L, LexState* ls, FuncState* fs, TString* varname) {
+	luaX_next(L, ls); //skip ','
+
+	new_localvar(L, ls, luaS_newliteral(L, "(for generator)"));
+	new_localvar(L, ls, luaS_newliteral(L, "(for state)"));
+	new_localvar(L, ls, luaS_newliteral(L, "(for iterator)"));
+
+	new_localvar(L, ls, varname);
+	new_localvar(L, ls, ls->t.seminfo.s);
+
+	luaX_next(L, ls);
+	checknext(L, ls, TK_IN);
+	expdesc e;
+	init_exp(&e, VVOID, 0);
+	expr(fs, &e);
+	lua_assert(e.k == VCALL);
+	SET_ARG_C(get_instruction(fs, (&e)), 4);
+	luaK_reserveregs(fs, 5);
+
+	check(L, ls, TK_DO);
+	forbody(L, ls, fs, 0);
+}
+
+static void forstat(struct lua_State* L, LexState* ls, FuncState* fs) {
+	luaX_next(L, ls); // skip TK_FOR
+
+	check(L, ls, TK_NAME);
+	TString* varname = ls->t.seminfo.s;
+	luaX_next(L, ls); // skip init var
+
+	if (ls->t.token == '=') {
+		fornum(L, ls, fs, varname);
+	}
+	else {
+		forlist(L, ls, fs, varname);
+	}
+}
+
+static void repeatstat(struct lua_State* L, LexState* ls, FuncState* fs) {
+	luaX_next(L, ls); // skip repeat
+
+	int repeat_init = fs->pc;
+	BlockCnt bl;
+	enterblock(L, ls, &bl, 1);
+	statlist(L, ls, fs);
+
+	checknext(L, ls, TK_UNTIL);
+	expdesc e;
+	init_exp(&e, VVOID, 0);
+	cond(L, ls, fs, &e);
+	luaK_patchclose(fs, e.f, repeat_init, NO_REG, repeat_init);
+
+	leaveblock(L, ls);
+}
+
+static void breakstat(struct lua_State* L, LexState* ls, FuncState* fs) {
+	luaX_next(L, ls); // skip break
+
+	TString* breakname = luaS_newliteral(L, "break");
+	Labellist* labellist = &ls->dyd->labellist;
+	luaM_growvector(L, labellist->arr, labellist->n + 1, labellist->size, Labeldesc, INT_MAX);
+
+	Labeldesc* label = &labellist->arr[labellist->n];
+	label->line = ls->linenumber;
+	label->varname = breakname;
+	label->pc = luaK_jump(fs, NULL);
+
+	labellist->n++;
+}
+
+static void funcbody(struct lua_State* L, LexState* ls, expdesc* e, int is_method) {
+	luaX_next(L, ls); // skip '('
+
+	FuncState new_fs;
+	new_fs.p = luaF_newproto(L);
+	open_func(ls, &new_fs);
+
+	expdesc e2;
+	init_exp(&e2, VLOCAL, 0);
+	newupvalues(ls->fs, &e2, luaS_newliteral(L, "_ENV"));
+
+	BlockCnt bl;
+	enterblock(L, ls, &bl, 0);
+
+	int nvars = 0;
+	if (is_method) {
+		new_localvar(L, ls, luaS_newliteral(L, "self"));
+		nvars++;
+	}
+
+	while (ls->t.token != ')') {
+		nvars++;
+		check(L, ls, TK_NAME);
+		new_localvar(L, ls, ls->t.seminfo.s);
+		luaX_next(L, ls);
+		if (ls->t.token == ',') {
+			luaX_next(L, ls);
+		}
+		else {
+			check(L, ls, ')');
+		}
+	}
+	luaX_next(L, ls); // skip ')'
+	adjustlocalvars(L, ls, ls->fs, nvars);
+	ls->fs->freereg = new_fs.p->nparam = nvars;
+
+	statlist(L, ls, ls->fs);
+	leaveblock(L, ls);
+	checknext(L, ls, TK_END);
+
+	close_func(L, &new_fs);
+
+	luaM_growvector(L, ls->fs->p->p, ls->fs->np + 1, ls->fs->p->sizep, Proto*, INT_MAX);
+	for (int i = ls->fs->np; i < ls->fs->p->sizep; i++) {
+		ls->fs->p->p[i] = NULL;
+	}
+	ls->fs->p->p[ls->fs->np] = new_fs.p;
+
+	e->k = VNONRELOC;
+	luaK_codeABx(ls->fs, OP_CLOSURE, ls->fs->freereg, ls->fs->np);
+	e->u.info = ls->fs->freereg;
+	luaK_reserveregs(ls->fs, 1);
+	ls->fs->np++;
+}
+
+static void funcstat(struct lua_State* L, LexState* ls, FuncState* fs) {
+	luaX_next(L, ls); // skip function
+	check(L, ls, TK_NAME);
+
+	expdesc e;
+	init_exp(&e, VVOID, 0);
+	primaryexp(L, ls, fs, &e);
+	luaX_next(L, ls);
+
+	int is_finish = 0;
+	int is_method = 0;
+	for (;;) {
+		if (is_finish) {
+			break;
+		}
+
+		switch (ls->t.token) {
+		case '.': {
+			fieldsel(L, ls, fs, &e);
+		} break;
+		case ':': {
+			is_method = 1;
+
+			luaX_next(L, ls);
+			check(L, ls, TK_NAME);
+
+			luaK_exp2anyregup(ls->fs, &e);
+			expdesc k;
+			codestring(ls->fs, ls->t.seminfo.s, &k);
+			luaK_indexed(ls->fs, &e, &k);
+			luaX_next(L, ls);
+
+			check(L, ls, '(');
+		} break;
+		case '(': {
+			is_finish = 1;
+		} break;
+		default: luaX_syntaxerror(L, ls, "function syntax error");
+		}
+	}
+
+	expdesc e2;
+	init_exp(&e2, VVOID, 0);
+	funcbody(L, ls, &e2, is_method);
+	luaK_storevar(fs, &e, &e2);
+}
+
+static void localfunc(struct lua_State* L, LexState* ls, FuncState* fs) {
+	luaX_next(L, ls); // skip TK_FUNCTION
+	
+	expdesc e;
+	init_exp(&e, VVOID, 0);
+	new_localvar(L, ls, ls->t.seminfo.s);
+	adjustlocalvars(L, ls, fs, 1);
+	primaryexp(L, ls, fs, &e);
+	luaX_next(L, ls);
+	check(L, ls, '(');
+
+	expdesc e2;
+	init_exp(&e2, VVOID, 0);
+	funcbody(L, ls, &e2, 0);
+	luaK_storevar(fs, &e, &e2);
+}
+
 static void exprstat(struct lua_State* L, LexState* ls, FuncState* fs) {
 	LH_assign lh;
 	suffixedexp(L, ls, fs, &lh.v);
@@ -583,10 +1042,81 @@ static void exprstat(struct lua_State* L, LexState* ls, FuncState* fs) {
 	}
 }
 
+static void retstat(struct lua_State* L, LexState* ls, FuncState* fs) {
+	luaX_next(L, ls); // skip TK_RETURN
+
+	int first_result = fs->freereg;
+	int nexp = 1;
+	expdesc e;
+	init_exp(&e, VVOID, 0);
+	if (!block_follow(L, ls)) {
+		expr(fs, &e);
+
+		for (;;) {
+			if (test_token(fs->ls->L, fs->ls, ',')) {
+				luaX_next(fs->ls->L, fs->ls);
+				if (e.k == VCALL) {
+					luaK_dischargevars(fs, &e);
+					luaK_reserveregs(fs, 1);
+				}
+				else {
+					luaK_exp2nextreg(fs, &e);
+				}
+
+				expr(fs, &e);
+				nexp++;
+			}
+			else if (test_token(fs->ls->L, fs->ls, ';')) {
+				luaX_next(fs->ls->L, fs->ls);
+				break;
+			}
+			else {
+				break;
+			}
+		}
+	}
+	if (e.k != VVOID && e.k != VCALL) luaK_exp2nextreg(fs, &e);
+	luaK_ret(fs, first_result, e.k == VCALL ? LUA_MULRET:nexp);
+}
+
 static void statement(struct lua_State* L, LexState* ls, FuncState* fs) {
 	switch (ls->t.token) {
+	case TK_IF: {
+		ifstat(L, ls, fs);
+	} break;
+	case TK_DO: {
+		dostat(L, ls, fs);
+	} break;
+	case TK_LOCAL: {
+		int token = luaX_lookahead(L, ls);
+		if (token == TK_FUNCTION) {
+			luaX_next(L, ls); // skip local
+			localfunc(L, ls, fs);
+		}
+		else {
+			localstat(L, ls, fs);
+		}
+	} break;
+	case TK_WHILE: {
+		whilestat(L, ls, fs);
+	} break;
+	case TK_FOR: {
+		forstat(L, ls, fs);
+	} break;
+	case TK_REPEAT: {
+		repeatstat(L, ls, fs);
+	} break;
+	case TK_BREAK: {
+		breakstat(L, ls, fs);
+	} break;
+	case TK_FUNCTION: {
+		funcstat(L, ls, fs);
+	} break;
 	case TK_NAME: {
 		exprstat(L, ls, fs);
+	} break;
+	case TK_RETURN: {
+		retstat(L, ls, fs);
 	} break;
 	default:
 		luaX_syntaxerror(L, ls, "unsupport syntax");
@@ -596,7 +1126,9 @@ static void statement(struct lua_State* L, LexState* ls, FuncState* fs) {
 
 static bool block_follow(struct lua_State* L, LexState* ls) {
 	switch (ls->t.token) {
-	case TK_EOS: case TK_END: {
+	case TK_ELSEIF: case TK_ELSE:
+	case TK_EOS:    case TK_END: 
+	case TK_UNTIL: {
 		return true;
 	} break;
 	default: return false;
@@ -613,17 +1145,24 @@ static void statlist(struct lua_State* L, LexState* ls, FuncState* fs) {
 
 static void close_func(struct lua_State* L, FuncState* fs) {
 	luaK_ret(fs, 0, 0);
+
+	LexState* ls = fs->ls;
+	ls->fs = fs->prev;
 }
 
 static void mainfunc(struct lua_State* L, LexState* ls, FuncState* fs) {
 	expdesc e;
 	init_exp(&e, VLOCAL, 0);
 
+	BlockCnt bl;
 	open_func(ls, fs);
 	newupvalues(fs, &e, fs->ls->env);
 
 	luaX_next(L, ls);
+	enterblock(L, ls, &bl, 0);
 	statlist(L, ls, fs);
+	leaveblock(L, ls);
+
 	close_func(L, fs);
 }
 
