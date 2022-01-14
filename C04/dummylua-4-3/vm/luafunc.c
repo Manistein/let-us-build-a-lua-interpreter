@@ -21,6 +21,7 @@ Proto* luaF_newproto(struct lua_State* L) {
 	f->sizeupvalues = 0;
 	f->source = NULL;
 	f->maxstacksize = 0;
+	f->sizeline = 0;
 
 	return f;
 }
