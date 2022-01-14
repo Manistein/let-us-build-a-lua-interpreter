@@ -32,6 +32,10 @@ static int addk(FuncState* fs, TValue* v) {
 
 	int k = fs->nk;
 	luaM_growvector(ls->L, p->k, fs->nk + 1, p->sizek, TValue, INT_MAX);
+	for (int i = k; i < p->sizek; i ++) {
+		setnilvalue(&p->k[i]);
+	}
+
 	setobj(&p->k[k], v);
 	setivalue(idx, k);
 
