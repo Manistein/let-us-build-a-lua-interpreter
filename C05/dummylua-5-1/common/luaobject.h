@@ -77,7 +77,12 @@ typedef void* (*lua_Alloc)(void* ud, void* ptr, size_t osize, size_t nsize);
 #define ttislngstr(o) ((o)->tt_ == LUA_LNGSTR)
 #define ttisdeadkey(o) ((o)->tt_ == LUA_TDEADKEY)
 #define ttistable(o) ((o)->tt_ == LUA_TTABLE)
+#define ttisfunction(o) (novariant(o) == LUA_TFUNCTION)
+#define ttisboolean(o) (novariant(o) == LUA_TBOOLEAN)
 #define ttisnil(o) ((o)->tt_ == LUA_TNIL)
+
+#define l_false(o) (ttisnil(o) || ttisboolean(o) && (o)->value_.b == 0)
+#define is_lua(o) ((o)->tt_ == LUA_TLCL)
 
 #ifdef _WINDOWS_PLATFORM_
 #define l_sprintf sprintf_s
@@ -149,6 +154,7 @@ struct Table {
     unsigned int lsizenode; // real hash size is 2 ^ lsizenode
     Node* lastfree;
     struct GCObject* gclist;
+	struct Table* metatable;
 };
 
 // compiler and vm structs
@@ -166,6 +172,8 @@ typedef struct Upvaldesc {
 
 typedef struct Proto {
     CommonHeader;
+	int* line;
+	int sizeline;
     int is_vararg;
     int nparam;
     Instruction* code;  // array of opcodes
@@ -202,5 +210,8 @@ typedef union Closure {
 
 int luaO_ceillog2(lua_Integer value);
 int luaO_arith(struct lua_State* L, int op, TValue* v1, TValue* v2); // the result will store in v1
+int luaO_concat(struct lua_State* L, TValue* arg1, TValue* arg2, TValue* target);
+TString* luaO_pushfstring(struct lua_State* L, const char* fmt, ...);
+TString* luaO_pushfvstring(struct lua_State* L, const char* fmt, va_list argp);
 
 #endif 

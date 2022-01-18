@@ -54,6 +54,11 @@ int luaX_lookahead(struct lua_State* L, LexState* ls) {
 	return ls->lookahead.token;
 }
 
+static void lexerror(LexState* ls, const char* error_text) {
+	luaO_pushfstring(ls->L, "%s", error_text);
+	luaD_throw(ls->L, LUA_ERRLEXER);
+}
+
 // increase line number, skip to next line
 static void inclinenumber(LexState* ls) {
 	int old = ls->current;
@@ -66,8 +71,7 @@ static void inclinenumber(LexState* ls) {
 	}
 
 	if (++ls->linenumber >= INT_MAX) {
-		LUA_ERROR(ls->L, "function inclinenumber is reach INT_MAX");
-		luaD_throw(ls->L, LUA_ERRLEXER);
+		lexerror(ls, "function inclinenumber is reach INT_MAX");
 	}
 }
 
@@ -81,8 +85,7 @@ static void save(struct lua_State* L, LexState* ls, int character) {
 
 		ls->buff->buffer = G(L)->frealloc(NULL, ls->buff->buffer, luaZ_buffersize(ls), size);
 		if (ls->buff->buffer == NULL) {
-			LUA_ERROR(L, "lualexer:the saved string is too long");
-			luaD_throw(L, LUA_ERRLEXER);
+			lexerror(ls, "lualexer:the saved string is too long");
 		}
 		ls->buff->size = size;
 	}
@@ -97,8 +100,7 @@ static int read_string(LexState* ls, int delimiter, Seminfo* seminfo) {
 		switch (ls->current)
 		{
 		case '\n': case '\r': case EOF: {
-			LUA_ERROR(ls->L, "uncomplete string");
-			luaD_throw(ls->L, LUA_ERRLEXER);
+			lexerror(ls, "uncomplete string");
 		} break;
 		case '\\': {
 			next(ls);
@@ -159,8 +161,7 @@ static int str2hex(LexState* ls) {
 	save(ls->L, ls, '\0');
 
 	if (num_part_count <= 0) {
-		LUA_ERROR(ls->L, "malformed number near '0x'");
-		luaD_throw(ls->L, LUA_ERRLEXER);
+		lexerror(ls, "malformed number near '0x'");
 	}
 
 	ls->t.seminfo.i = strtoll(ls->buff->buffer, NULL, 0);
@@ -176,8 +177,7 @@ static int str2number(LexState* ls, bool has_dot) {
 	while (isdigit(ls->current) || ls->current == '.') {
 		if (ls->current == '.') {
 			if (has_dot) {
-				LUA_ERROR(ls->L, "unknow number");
-				luaD_throw(ls->L, LUA_ERRLEXER);
+				lexerror(ls, "unknow number");
 			}
 			has_dot = true;
 		}
@@ -396,72 +396,68 @@ int luaX_next(struct lua_State* L, LexState* ls) {
 }
 
 void luaX_syntaxerror(struct lua_State* L, LexState* ls, const char* error_text) {
-	lua_writestring(getstr(ls->source));
-	lua_writestring(" ");
-
-	char buf[1024];
-	l_sprintf(buf, sizeof(buf), "%d", ls->linenumber);
-	lua_writestring(buf);
-	lua_writestring(":");
-	lua_writestring("syntax error near ");
+	// the path of the compiling file
+	luaO_pushfstring(L, "%s \n syntax error near %s line:%d", error_text, getstr(ls->source), ls->linenumber);
 	
 	if (ls->t.token >= FIRST_REVERSED && ls->t.token <= TK_FUNCTION) {
-		lua_writestring(luaX_tokens[ls->t.token - FIRST_REVERSED]);
+		luaO_pushfstring(L, "%s", luaX_tokens[ls->t.token - FIRST_REVERSED]);
 	}
 	else {
 		switch (ls->t.token) {
 		case TK_STRING: case TK_NAME: {
-			lua_writestring(getstr(ls->t.seminfo.s));
+			luaO_pushfstring(L, "%s", getstr(ls->t.seminfo.s));
 		} break;
 		case TK_FLOAT: {
-			l_sprintf(buf, sizeof(buf), "%f", (float)ls->t.seminfo.r);
-			lua_writestring(buf);
+			luaO_pushfstring(L, "%f", (float)ls->t.seminfo.r);
 		} break;
 		case TK_INT: {
-			l_sprintf(buf, sizeof(buf), "%d", (int)ls->t.seminfo.i);
-			lua_writestring(buf);
+			luaO_pushfstring(L, "%d", (int)ls->t.seminfo.i);
 		} break;
 		case TK_NOTEQUAL: {
-			lua_writestring("~=");
+			luaO_pushfstring(L, "%s", "~=");
 		} break;
 		case TK_EQUAL: {
-			lua_writestring("==");
+			luaO_pushfstring(L, "%s", "==");
 		} break;
 		case TK_GREATEREQUAL: {
-			lua_writestring(">=");
+			luaO_pushfstring(L, "%s", ">=");
 		} break;
 		case TK_LESSEQUAL: {
-			lua_writestring("<=");
+			luaO_pushfstring(L, "%s", "<=");
 		} break;
 		case TK_SHL: {
-			lua_writestring("<<");
+			luaO_pushfstring(L, "%s", "<<");
 		} break;
 		case TK_SHR: {
-			lua_writestring(">>");
+			luaO_pushfstring(L, "%s", ">>");
 		} break;
 		case TK_MOD: {
-			lua_writestring("%");
+			luaO_pushfstring(L, "%s", "%%");
 		} break;
 		case TK_DOT: {
-			lua_writestring(".");
+			luaO_pushfstring(L, "%s", ".");
 		} break;
 		case TK_VARARG: {
-			lua_writestring("...");
+			luaO_pushfstring(L, "%s", "...");
 		} break;
 		case TK_CONCAT: {
-			lua_writestring("..");
+			luaO_pushfstring(L, "%s", "..");
 		} break;
 		case TK_EOS: {
-			lua_writestring("eos");
+			luaO_pushfstring(L, "%s", "eos");
 		} break;
 		default: {
-			l_sprintf(buf, sizeof(buf), "%c", ls->t.token);
-			lua_writestring(buf);
+			char buff[BUFSIZ];
+			l_sprintf(buff, sizeof(buff), "%c", ls->t.token);
+			luaO_pushfstring(L, "%s", buff);
 		} break;
 		}
 	}
-	lua_writestring(" ");
-	lua_writestring(error_text);
-	lua_writeline();
-	luaD_throw(L, LUA_ERRLEXER);
+
+	luaO_concat(L, L->top - 2, L->top - 1, L->top - 2);
+	L->top--;
+
+	TString* ts = gco2ts(gcvalue(L->top - 1));
+
+	luaD_throw(L, LUA_ERRPARSER);
 }

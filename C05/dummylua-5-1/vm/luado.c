@@ -27,6 +27,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "luagc.h"
 #include "luafunc.h"
 #include "luavm.h"
+#include "../common/luadebug.h"
 
 #define LUA_TRY(L, c, a) if (_setjmp((c)->b) == 0) { a } 
 
@@ -42,8 +43,9 @@ struct lua_longjmp {
     int status;
 };
 
-void seterrobj(struct lua_State* L, int error) {
-    lua_pushinteger(L, error);
+void seterrobj(struct lua_State* L, int error, StkId oldtop) {
+	setobj(oldtop, L->top - 1);
+	L->top = oldtop + 1;
 }
 
 void luaD_checkstack(struct lua_State* L, int need) {
@@ -55,7 +57,7 @@ void luaD_checkstack(struct lua_State* L, int need) {
 
 void luaD_growstack(struct lua_State* L, int size) {
     if (L->stack_size > LUA_MAXSTACK) {
-        luaD_throw(L, LUA_ERRERR);
+		luaG_runerror(L, "stack size is too big %d", L->stack_size);
     }
 
     int stack_size = L->stack_size * 2;
@@ -66,7 +68,6 @@ void luaD_growstack(struct lua_State* L, int size) {
     
     if (stack_size > LUA_MAXSTACK) {
         stack_size = LUA_MAXSTACK + LUA_ERRORSTACK;
-        LUA_ERROR(L, "stack overflow");
     } 
 
     TValue* old_stack = L->stack;
@@ -193,8 +194,7 @@ int luaD_precall(struct lua_State* L, StkId func, int nresult) {
 			L->ci->callstatus |= CIST_LUA;
 		} break;
 		default: {
-			LUA_ERROR(L, "attempt to call a unsupport value.");
-			luaD_throw(L, LUA_ERRERR);
+			luaG_runerror(L, "%s", "attempt to call a unsupport value.");
 		} break;
     }
 
@@ -280,24 +280,25 @@ int luaD_call(struct lua_State* L, StkId func, int nresult) {
     return LUA_OK;
 }
 
-static void reset_unuse_stack(struct lua_State* L, ptrdiff_t old_top) {
-	StkId top = restorestack(L, old_top);
-    for (; top < L->top; top++) {
-        top->tt_ = LUA_TNIL;
-    }
+int luaD_callnoyield(struct lua_State* L, StkId func, int nresult) {
+	int ret;
+
+	L->nny++;
+	ret = luaD_call(L, func, nresult);
+	L->nny--;
+
+	return ret;
 }
 
 int luaD_pcall(struct lua_State* L, Pfunc f, void* ud, ptrdiff_t oldtop, ptrdiff_t ef) {
     int status;
     struct CallInfo* old_ci = L->ci;
-    ptrdiff_t old_errorfunc = L->errorfunc;    
+    ptrdiff_t old_errorfunc = L->errorfunc;
     
     status = luaD_rawrunprotected(L, f, ud);
     if (status != LUA_OK) {
-        reset_unuse_stack(L, oldtop);
         L->ci = old_ci;
-        L->top = restorestack(L, oldtop);
-        seterrobj(L, status);
+        seterrobj(L, status, restorestack(L, oldtop));
     }
     
     L->errorfunc = old_errorfunc; 
@@ -341,7 +342,6 @@ int luaD_load(struct lua_State* L, lua_Reader reader, void* data, const char* fi
 	int c = 0;
 	skipcommnet(lf, &c);
 	if (c == EOF) {
-		LUA_ERROR(L, "EOF error!");
 		return LUA_ERRERR;
 	}
 
@@ -351,7 +351,6 @@ int luaD_load(struct lua_State* L, lua_Reader reader, void* data, const char* fi
 	luaZ_init(L, &z, reader, data);
 
 	if (luaD_protectedparser(L, &z, filename) != LUA_OK) {
-		LUA_ERROR(L, "protected parser error!\n");
 		return LUA_ERRERR;
 	}
 
@@ -389,7 +388,6 @@ int luaD_protectedparser(struct lua_State* L, Zio* z, const char* filename) {
 
 	int status = luaD_pcall(L, f_parser, (void*)(&p), savestack(L, L->top), L->errorfunc);
 	if (status != LUA_OK) {
-		LUA_ERROR(L, "luaD_protectedparser call f_parser failure\n");
 		return LUA_ERRERR;
 	}
 

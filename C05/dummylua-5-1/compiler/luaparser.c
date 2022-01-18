@@ -22,6 +22,7 @@ static void removevars(struct lua_State* L, LexState* ls);
 static void statlist(struct lua_State* L, LexState* ls, FuncState* fs);
 static void close_func(struct lua_State* L, FuncState* fs);
 static bool block_follow(struct lua_State* L, LexState* ls);
+static void funcbody(struct lua_State* L, LexState* ls, expdesc* e, int is_method);
 
 #define eqstr(a, b) ((a) == (b))
 #define vkisvar(v) (v->k >= VLOCAL && v->k <= VINDEXED)
@@ -147,6 +148,7 @@ static void singlevar(FuncState* fs, expdesc* e, TString* n) {
 	if (e->k == VVOID) { // variable is in global
 		expdesc k;
 		init_exp(&k, VVOID, 0);
+
 		singlevaraux(fs, e, fs->ls->env);
 		lua_assert(e->k == VUPVAL);
 		codestring(fs, n, &k);
@@ -218,7 +220,13 @@ static void recfield(FuncState* fs, struct ConsControl* cc) {
 
 	checknext(fs->ls->L, fs->ls, '=');
 	int rk = luaK_exp2RK(fs, &k);
-	expr(fs, &v);
+	if (fs->ls->t.token == TK_FUNCTION) {
+		luaX_next(fs->ls->L, fs->ls);
+		funcbody(fs->ls->L, fs->ls, &v, 0);
+	}
+	else {
+		expr(fs, &v);
+	}
 	luaK_codeABC(fs, OP_SETTABLE, cc->t->u.info, rk, luaK_exp2RK(fs, &v));
 
 	fs->freereg = reg;
@@ -548,7 +556,7 @@ static void adjust_assign(FuncState* fs, int nvars, int nexps, expdesc* e) {
 		extra++;
 		if (extra < 0) extra = 0;
 		luaK_setreturns(fs, e, extra);
-		if (extra > 1) luaK_reserveregs(fs, extra);
+		if (extra >= 1) luaK_reserveregs(fs, extra);
 	}
 	else {
 		if (e->k != VVOID) luaK_exp2nextreg(fs, e);
@@ -922,6 +930,7 @@ static void funcbody(struct lua_State* L, LexState* ls, expdesc* e, int is_metho
 
 	FuncState new_fs;
 	new_fs.p = luaF_newproto(L);
+	new_fs.p->source = ls->source;
 	open_func(ls, &new_fs);
 
 	expdesc e2;
@@ -1089,6 +1098,9 @@ static void retstat(struct lua_State* L, LexState* ls, FuncState* fs) {
 
 static void statement(struct lua_State* L, LexState* ls, FuncState* fs) {
 	switch (ls->t.token) {
+	case ';': {
+		luaX_next(L, ls);
+	} break;
 	case TK_IF: {
 		ifstat(L, ls, fs);
 	} break;
@@ -1243,6 +1255,7 @@ LClosure* luaY_parser(struct lua_State* L, Zio* zio, MBuffer* buffer, Dyndata* d
 	
 	LClosure* closure = luaF_newLclosure(L, 1);
 	closure->p = fs.p = luaF_newproto(L);
+	closure->p->source = ls.source;
 
 	setlclvalue(L->top, closure);
 	increase_top(L);

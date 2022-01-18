@@ -258,7 +258,6 @@ int luaL_loadfile(struct lua_State* L, const char* filename) {
 	l_fopen(&fptr, filename, "rb");
 	if (fptr == NULL)
 	{
-		printf("can not open file %s", filename);
 		return LUA_ERRERR;
 	}
 

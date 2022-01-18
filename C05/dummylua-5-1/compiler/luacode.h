@@ -9,7 +9,7 @@
 #define NO_JUMP -1
 #define NO_REG -1
 
-#define luaK_codeAsBx(fs, c, a, sbx) luaK_codeABx(fs, c, a, sbx + LUA_IBIAS)
+#define luaK_codeAsBx(fs, c, a, sbx) luaK_codeABx(fs, c, a, (sbx) + LUA_IBIAS)
 
 /*
 ** Ensures final expression result is either in a register or it is

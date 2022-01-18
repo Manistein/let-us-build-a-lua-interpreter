@@ -26,6 +26,9 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "luatable.h"
 #include "../compiler/lualexer.h"
 #include "../vm/luafunc.h"
+#include "luadebug.h"
+#include "luaobject.h"
+#include "luatm.h"
 
 typedef struct LX {
     lu_byte extra_[LUA_EXTRASPACE];
@@ -57,6 +60,7 @@ static void stack_init(struct lua_State* L) {
     L->ci->func = L->stack;
     L->ci->top = L->stack + LUA_MINSTACK;
     L->ci->previous = L->ci->next = NULL;
+	L->ci->callstatus = LUA_OK;
 }
 
 static void init_registry(struct lua_State* L) {
@@ -108,10 +112,13 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
 
     // gc init
     g->gcstate = GCSpause;
+	g->gcrunning = 1;
     g->currentwhite = bitmask(WHITE0BIT);
     g->totalbytes = sizeof(LG);
     g->allgc = NULL;
     g->fixgc = NULL;
+	g->finobjs = NULL;
+	g->tobefnz = NULL;
     g->sweepgc = NULL;
     g->gray = NULL;
     g->grayagain = NULL;
@@ -120,12 +127,15 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
     g->GCestimate = 0;
     g->GCstepmul = LUA_GCSTEPMUL;
     g->seed = makeseed(L);
+	g->gcfinnum = 0;
 
     L->marked = luaC_white(g);
     L->gclist = NULL;
+	L->nny = 0;
 
     stack_init(L);
     luaS_init(L);
+	luaT_init(L);
     init_registry(L);
 	luaX_init(L);
 
@@ -378,6 +388,53 @@ TValue* index2addr(struct lua_State* L, int idx) {
     }
 }
 
+int lua_setmetatable(struct lua_State* L, int idx) {
+	TValue* obj = index2addr(L, idx);
+	TValue* v = L->top - 1;
+
+	if (!ttistable(v)) {
+		luaG_runerror(L, "table exception: get %d", novariant(v));
+	}
+
+	struct Table* mt = gco2tbl(gcvalue(v));
+	switch (novariant(obj)) {
+	case LUA_TTABLE: {
+		struct Table* t = gco2tbl(gcvalue(obj));
+		t->metatable = mt;
+
+		TValue o;
+		setgco(&o, obj2gco(mt));
+		luaC_objbarrier(L, t, &o);
+		luaC_checkfinalizer(L, idx);
+	} break;
+	case LUA_TUSERDATA: {
+		// TODO
+	} break;
+	default: {
+		G(L)->mt[novariant(obj)] = mt;
+	} break;
+	}
+	L->top--;
+
+	return 1;
+}
+
+struct Table* lua_getmetable(struct lua_State* L, int idx) {
+	TValue* obj = index2addr(L, idx);
+	switch (novariant(obj)) {
+	case LUA_TTABLE: {
+		return hvalue(obj)->metatable;
+	} break;
+	case LUA_TUSERDATA: {
+		// TODO
+		return NULL;
+	} break;
+	default: {
+		return G(L)->mt[novariant(obj)];
+	} break;
+	}
+}
+
 lua_Integer lua_tointegerx(struct lua_State* L, int idx, int* isnum) {
     lua_Integer ret = 0;
     TValue* addr = index2addr(L, idx); 
@@ -387,7 +444,6 @@ lua_Integer lua_tointegerx(struct lua_State* L, int idx, int* isnum) {
     }
     else {
         *isnum = 0;
-        LUA_ERROR(L, "can not convert to integer!\n");
     }
 
     return ret;
@@ -401,7 +457,6 @@ lua_Number lua_tonumberx(struct lua_State* L, int idx, int* isnum) {
         ret = addr->value_.n;
     }
     else {
-        LUA_ERROR(L, "can not convert to number!");
         *isnum = 0;
     }
     return ret;

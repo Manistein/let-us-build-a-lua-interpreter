@@ -25,28 +25,84 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "luaopcodes.h"
 #include "luafunc.h"
 #include "../common/luaobject.h"
+#include "../common/luadebug.h"
 
-// slot == NULL意味着t不是table类型
-void luaV_finishget(struct lua_State* L, struct Table* t, StkId val, const TValue* slot) {
-    if (slot == NULL) {
-        luaD_throw(L, LUA_ERRRUN);
-    }
-    else {
-        setnilvalue(val);
-    }
+#define MAXLOOP 2000
+
+// if slot is null, then it means that t is not a table
+void luaV_finishget(struct lua_State* L, TValue* t, const StkId key, StkId val, TValue* slot) {
+	TValue* tm;
+	for (int i = 0; i < MAXLOOP; i++) {
+		if (slot == NULL) { // t is not a table
+			tm = luaT_gettmbyobj(L, t, TM_INDEX);
+			if (tm == NULL) {
+				luaG_runerror(L, "%s", "can not find __index for object");
+			}
+		}
+		else {
+			lua_assert(ttisnil(slot));
+			if (!hvalue(t)->metatable) {
+				setnilvalue(val);
+				return;
+			}
+
+			tm = (TValue*)luaH_getstr(L, hvalue(t)->metatable, G(L)->tmnames[TM_INDEX]);
+			if (ttisnil(tm)) {
+				setnilvalue(val);
+				return;
+			}
+		}
+
+		if (ttisfunction(tm)) {
+			luaT_callTM(L, tm, t, key, val, 1);
+			return;
+		}
+
+		t = tm;
+		if (luaV_fastget(L, t, key, luaH_get, slot)) {
+			setobj(val, (StkId)slot);
+			return;
+		}
+	}
+
+	luaG_runerror(L, "%s", "__index maybe loop");
 }
 
-void luaV_finishset(struct lua_State* L, struct Table* t, const TValue* key, StkId val, const TValue* slot) {
-    if (slot == NULL) {
-        luaD_throw(L, LUA_ERRRUN);
-    }
+void luaV_finishset(struct lua_State* L, TValue* t, const TValue* key, StkId val, TValue* slot) {
+	TValue* tm;
+	for (int i = 0; i < MAXLOOP; i++) {
+		if (slot == NULL) { // t is not a table
+			tm = luaT_gettmbyobj(L, t, TM_NEWINDEX);
+			if (tm == NULL) {
+				luaG_runerror(L, "%s", "can not find __newindex for object");
+			}
+		}
+		else {
+			lua_assert(ttisnil(slot));
+			tm = luaT_gettmbyobj(L, t, TM_NEWINDEX);
+			if (tm == NULL) {
+				if (slot == luaO_nilobject) {
+					slot = luaH_newkey(L, hvalue(t), key);
+				}
 
-    if (slot == luaO_nilobject) {
-        slot = luaH_newkey(L, t, key);
-    }
+				setobj(slot, val);
+				luaC_barrierback(L, hvalue(t), slot);
+				return;
+			}
+		}
 
-    setobj(cast(TValue*, slot), val);
-    luaC_barrierback(L, t, slot);
+		if (ttisfunction(tm)) {
+			luaT_callTM(L, tm, t, (TValue*)key, val, 0);
+			return;
+		}
+
+		t = tm;
+		if (luaV_fastset(L, t, key, val, luaH_get, slot)) {
+			return;
+		}
+	}
+
+	luaG_runerror(L, "%s", "__newindex maybe loop");
 }
 
 int luaV_eqobject(struct lua_State* L, const TValue* a, const TValue* b) {
@@ -67,6 +123,7 @@ int luaV_eqobject(struct lua_State* L, const TValue* a, const TValue* b) {
         }
     }    
 
+	TValue* tm = NULL;
     switch(a->tt_) {
         case LUA_TNIL: return 1;
         case LUA_NUMFLT: return a->value_.n == b->value_.n;
@@ -76,12 +133,24 @@ int luaV_eqobject(struct lua_State* L, const TValue* a, const TValue* b) {
         case LUA_TBOOLEAN: return a->value_.b == b->value_.b; 
         case LUA_TLIGHTUSERDATA: return a->value_.p == b->value_.p; 
         case LUA_TLCF: return a->value_.f == b->value_.f;
+		case LUA_TTABLE: {
+			if (gcvalue(a) == gcvalue(b)) return 1;
+			tm = luaT_gettmbyobj(L, (TValue*)a, TM_EQ);
+			if (!tm) tm = luaT_gettmbyobj(L, (TValue*)b, TM_EQ);
+		} break;
         default: {
             return gcvalue(a) == gcvalue(b);
         } break;
     } 
 
-    return 0;
+	if (tm == NULL) {
+		return 0;
+	}
+
+	luaT_trycallbinTM(L, (TValue*)a, (TValue*)b, TM_EQ);
+	int ret = !l_false(L->top - 1);
+	L->top--;
+	return ret;
 }
 
 // implement of instructions
@@ -103,21 +172,18 @@ static void op_getupval(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 		setobj(ra, upval->v);
 	}
 	else {
-		printf("op_getupval:upval is not exist");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "op_getupval:upval is not exist");
 	}
 }
 
 static void op_gettabup(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	int b = GET_ARG_B(i);
 	TValue* upval = cl->upvals[b]->v;
-	struct Table* t = gco2tbl(gcvalue(upval));
 	int arg_c = GET_ARG_C(i);
 	if (ISK(arg_c)) {
 		int index = arg_c - MAININDEXRK - 1;
 		TValue* key = &cl->p->k[index];
-		TValue* value = (TValue*)luaH_get(L, t, key);
-		setobj(ra, value);
+		luaV_gettable(L, upval, key, ra);
 	}
 	else {
 		TValue* value = L->ci->l.base + arg_c;
@@ -156,21 +222,16 @@ static void op_gettable(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 	int c = GET_ARG_C(i);
 	TValue* vt = L->ci->l.base + b;
 	if (!ttistable(vt)) {
-		// TODO thow exception
-		printf("OP_GETTABLE, RA(%d) RB(%d) RC(%d); RB is not index to a table", ra - L->ci->l.base, b, c);
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "RB is not index to a table; OP_GETTABLE, RA(%d) RB(%d) RC(%d)", ra - L->ci->l.base, b, c);
 	}
 
-	struct Table* t = gco2tbl(gcvalue(vt));
-	TValue* v;
 	if (ISK(c)) {
 		int k = c - MAININDEXRK - 1;
-		v = (TValue*)luaH_get(L, t, (const TValue*)&cl->p->k[k]);
+		luaV_gettable(L, vt, (const TValue*)&cl->p->k[k], ra);
 	}
 	else {
-		v = (TValue*)luaH_get(L, t, (const TValue*)(L->ci->l.base + c));
+		luaV_gettable(L, vt, (const TValue*)(L->ci->l.base + c), ra);
 	}
-	setobj(ra, v);
 }
 
 static void op_self(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
@@ -179,23 +240,19 @@ static void op_self(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) 
 
 	TValue* vt = L->ci->l.base + b;
 	if (!ttistable(vt)) {
-		// TODO thow exception
-		printf("OP_SELF, RA(%d) RB(%d) RC(%d); RB is not index to a table", ra - L->ci->l.base, b, c);
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "OP_SELF, RA(%d) RB(%d) RC(%d); RB is not index to a table", ra - L->ci->l.base, b, c);
 	}
 	struct Table* t = gco2tbl(gcvalue(vt));
 
 	StkId ra1 = ra + 1;
-	StkId f;
 	setobj(ra1, vt);
 	if (ISK(c)) {
 		int idx = c - MAININDEXRK - 1;
-		f = (StkId)luaH_get(L, t, &cl->p->k[idx]);
+		luaV_gettable(L, vt, &cl->p->k[idx], ra);
 	}
 	else {
-		f = (StkId)luaH_get(L, t, L->ci->l.base + c);
+		luaV_gettable(L, vt, L->ci->l.base + c, ra);
 	}
-	setobj(ra, f);
 }
 
 static void op_test(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
@@ -245,9 +302,7 @@ static void op_unm(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	TValue o;
 	setobj(&o, rb);
 	if (!luaO_arith(L, LUA_OPT_UMN, &o, rb)) {
-		// TODO throw exception
-		printf("op_unm: rb's type is incorrect");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "op_unm: rb's type is incorrect");
 	}
 	setobj(ra, &o);
 }
@@ -265,9 +320,7 @@ static void op_len(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 		setivalue(ra, len);
 	}
 	else {
-		// TODO throw exception
-		printf("op_len: rb's type is incorrect");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "op_len: rb's type is incorrect");
 	}
 }
 
@@ -275,9 +328,7 @@ static void op_bnot(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) 
 	StkId rb = L->ci->l.base + GET_ARG_B(i);
 	TValue o;
 	if (!luaO_arith(L, LUA_OPT_BNOT, &o, rb)) {
-		// TODO throw exception
-		printf("op_len: rb's type is incorrect");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "op_len: rb's type is incorrect");
 	}
 	setobj(ra, &o);
 }
@@ -304,7 +355,7 @@ static void op_not(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	}
 }
 
-static void binop(struct lua_State* L, LClosure* cl, StkId ra, Instruction i, int op) {
+static void binop(struct lua_State* L, LClosure* cl, StkId ra, Instruction i, int op, TMS event) {
 	int b = GET_ARG_B(i);
 	int c = GET_ARG_C(i);
 	StkId rb, rc;
@@ -325,63 +376,73 @@ static void binop(struct lua_State* L, LClosure* cl, StkId ra, Instruction i, in
 	TValue o;
 	setobj(&o, rb);
 	if (!luaO_arith(L, op, &o, rc)) {
-		// TODO throw exception
-		printf("binop: rb's type is incorrect. type is %d", op);
-		luaD_throw(L, LUA_ERRRUN);
+		luaT_trycallbinTM(L, &o, rc, event);
+		setobj(&o, L->top - 1);
+		L->top--;
 	}
 	setobj(ra, &o);
 }
 
 static void op_add(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_ADD);
+	binop(L, cl, ra, i, LUA_OPT_ADD, TM_ADD);
 }
 
 static void op_sub(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_SUB);
+	binop(L, cl, ra, i, LUA_OPT_SUB, TM_SUB);
 }
 
 static void op_mul(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_MUL);
+	binop(L, cl, ra, i, LUA_OPT_MUL, TM_MUL);
 }
 
 static void op_div(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_DIV);
+	binop(L, cl, ra, i, LUA_OPT_DIV, TM_DIV);
 }
 
 static void op_idiv(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_IDIV);
+	binop(L, cl, ra, i, LUA_OPT_IDIV, TM_IDIV);
 }
 
 static void op_mod(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_MOD);
+	binop(L, cl, ra, i, LUA_OPT_MOD, TM_MOD);
 }
 
 static void op_pow(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_POW);
+	binop(L, cl, ra, i, LUA_OPT_POW, TM_POW);
 }
 
 static void op_band(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_BAND);
+	binop(L, cl, ra, i, LUA_OPT_BAND, TM_BAND);
 }
 
 static void op_bor(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_BOR);
+	binop(L, cl, ra, i, LUA_OPT_BOR, TM_BOR);
 }
 
 static void op_bxor(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_BXOR);
+	binop(L, cl, ra, i, LUA_OPT_BXOR, TM_XOR);
 }
 
 static void op_shl(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_SHL);
+	binop(L, cl, ra, i, LUA_OPT_SHL, TM_SHL);
 }
 
 static void op_shr(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	binop(L, cl, ra, i, LUA_OPT_SHR);
+	binop(L, cl, ra, i, LUA_OPT_SHR, TM_SHR);
 }
 
 static void op_concat(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	// TODO
+	int b = GET_ARG_B(i);
+	int c = GET_ARG_C(i);
+
+	StkId base = L->ci->l.base;
+	StkId arg_b = base + b;
+	StkId arg_c = base + c;
+	if (!luaO_concat(L, arg_b, arg_c, ra)) {
+		luaT_trycallbinTM(L, arg_b, arg_c, TM_CONCAT);
+		setobj(ra, L->top - 1);
+		L->top--;
+	}
 }
 
 static void op_eq(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
@@ -397,13 +458,21 @@ static void op_lt(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	StkId rc = RK(L, cl, GET_ARG_C(i));
 	lua_Number nb, nc;
 	if (!luaV_tonumber(L, rb, &nb) || !luaV_tonumber(L, rc, &nc)) {
-		// TODO throw exception
-		printf("op_lt: rb or rc is not number");
-		luaD_throw(L, LUA_ERRRUN);
-	}
+		luaT_trycallbinTM(L, rb, rc, TM_LT);
 
-	if ((nb < nc) != GET_ARG_A(i)) {
-		L->ci->l.savedpc++;
+		TValue o;
+		setobj(&o, L->top - 1);
+		L->top--;
+		
+		int v = !l_false(&o);
+		if (v != GET_ARG_A(i)) {
+			L->ci->l.savedpc++;
+		}
+	}
+	else {
+		if ((nb < nc) != GET_ARG_A(i)) {
+			L->ci->l.savedpc++;
+		}
 	}
 }
 
@@ -412,13 +481,21 @@ static void op_le(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	StkId rc = RK(L, cl, GET_ARG_C(i));
 	lua_Number nb, nc;
 	if (!luaV_tonumber(L, rb, &nb) || !luaV_tonumber(L, rc, &nc)) {
-		// TODO throw exception
-		printf("op_le: rb or rc is not number");
-		luaD_throw(L, LUA_ERRRUN);
-	}
+		luaT_trycallbinTM(L, rb, rc, TM_LE);
 
-	if ((nb <= nc) != GET_ARG_A(i)) {
-		L->ci->l.savedpc++;
+		TValue o;
+		setobj(&o, L->top - 1);
+		L->top--;
+
+		int v = !l_false(&o);
+		if (v != GET_ARG_A(i)) {
+			L->ci->l.savedpc++;
+		}
+	}
+	else {
+		if ((nb <= nc) != GET_ARG_A(i)) {
+			L->ci->l.savedpc++;
+		}
 	}
 }
 
@@ -442,9 +519,7 @@ static void op_setupval(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 static void op_settabup(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	TValue* upval = cl->upvals[GET_ARG_A(i)]->v;
 	if (!ttistable(upval)) {
-		// TODO throw exception
-		printf("op_settabup: upval is not table");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "op_settabup: upval is not table");
 	}
 	struct Table* t = gco2tbl(gcvalue(upval));
 	TValue* v = luaH_set(L, t, RK(L, cl, GET_ARG_B(i)));
@@ -460,9 +535,7 @@ static void op_newtable(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 
 static void op_setlist(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	if (!ttistable(ra)) {
-		// TODO throw exception
-		printf("op_setlist: ra is not table type");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "op_setlist: ra is not table type");
 	}
 
 	struct Table* t = gco2tbl(gcvalue(ra));
@@ -486,9 +559,7 @@ static void op_setlist(struct lua_State* L, LClosure* cl, StkId ra, Instruction 
 static void op_settable(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	TValue* tv = L->ci->l.base + GET_ARG_A(i);
 	if (tv->tt_ != LUA_TTABLE) {
-		// TODO throw exception
-		printf("op_settable: ra is not table type");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "op_settable: ra is not table type");
 	}
 
 	struct Table* t = gco2tbl(gcvalue(tv));
@@ -509,21 +580,18 @@ static void op_settable(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 		rc = L->ci->l.base + c;
 	}
 
-	TValue* val = luaH_set(L, t, rb);
-	setobj(val, rc);
+	luaV_settable(L, tv, rb, rc);
 }
 
 static void op_forprep(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	StkId step_ptr = ra + 2;
 	if (!ttisinteger(step_ptr) && !ttisfloat(step_ptr)) {
-		printf("op_forprep:step type error");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "op_forprep:step type error");
 	}
 	
 	int arith_ret = luaO_arith(L, LUA_OPT_SUB, ra, step_ptr);
 	if (!arith_ret) {
-		printf("op_forprep:arith error");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "op_forprep:arith error");
 	}
 
 	int sbx = GET_ARG_sBx(i);
@@ -540,8 +608,7 @@ static void op_forloop(struct lua_State* L, LClosure* cl, StkId ra, Instruction 
 
 	int arith_ret = luaO_arith(L, LUA_OPT_ADD, ra, step_ptr);
 	if (!arith_ret) {
-		printf("op_forloop:arith error");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "op_forloop:arith error");
 	}
 
 	lua_Number v1, v2, v3;

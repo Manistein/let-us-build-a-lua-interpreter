@@ -23,8 +23,11 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "../common/luastring.h"
 #include "../common/luatable.h"
 #include "luafunc.h"
+#include "luado.h"
+#include "../common/luadebug.h"
 
 #define GCMAXSWEEPGCO 25
+#define GCPEROBJCOST ((sizeof(TString) + 4) / 4)
 
 #define gettotalbytes(g) (g->totalbytes + g->GCdebt)
 #define white2gray(o) resetbits((o)->marked, WHITEBITS)
@@ -111,6 +114,10 @@ static lu_mem traverse_thread(struct lua_State* L, struct lua_State* th) {
 }
 
 static lu_mem traverse_strong_table(struct lua_State* L, struct Table* t) {
+	if (t->metatable) {
+		markobject(L, t->metatable);
+	}
+
     for (int i = 0; i < (int)t->arraysize; i++) {
         markvalue(L, &t->array[i]); 
     }
@@ -224,13 +231,106 @@ static void propagateall(struct lua_State* L) {
     }
 }
 
+static void markmt(struct lua_State* L) {
+	for (int i = 0; i < LUA_NUMS; i++) {
+		if (G(L)->mt[i])
+			markobject(L, G(L)->mt[i]);
+	}
+}
+
+static void separate_tobefnz(struct lua_State* L) {
+	struct GCObject* prev = NULL;
+	struct GCObject* next = NULL;
+	for (struct GCObject* gco = G(L)->finobjs; gco != NULL;) {
+		next = gco->next;
+
+		if (iswhite(gco)) {
+			if (prev) {
+				prev->next = gco->next;
+				gco->next = G(L)->tobefnz;
+				G(L)->tobefnz = gco;
+			}
+			else {
+				G(L)->allgc = gco->next;
+				gco->next = G(L)->tobefnz;
+				G(L)->tobefnz = gco;
+			}
+		}
+
+		prev = gco;
+		gco = next;
+	}
+}
+
+static void propagate_tobefnz(struct lua_State* L) {
+	for (struct GCObject* gco = G(L)->finobjs; gco != NULL; gco = gco->next) {
+		markobject(L, gco);
+	}
+}
+
+static int dothecall(struct lua_State* L, void* ud) {
+	return luaD_callnoyield(L, L->top - 2, 0);
+}
+
+static struct GCObject* udata2finalize(struct lua_State* L) {
+	struct global_State* g = G(L);
+	struct GCObject* gco = g->tobefnz;
+	lua_assert(tofinalizer(gco));
+
+	g->tobefnz = gco->next;
+	gco->next = g->allgc;
+	g->allgc = gco;
+
+	resetbit(gco->marked, FINALIZERBIT);
+	return gco;
+}
+
+static void GCTM(struct lua_State* L) {
+	struct global_State* g = G(L);
+
+	TValue o;
+	setgco(&o, udata2finalize(L));
+	TValue* tm = luaT_gettmbyobj(L, &o, TM_GC);
+	if (tm) {
+		lu_byte running = g->gcrunning;
+		g->gcrunning = 0; // stop to gc now
+
+		StkId func = L->top - 1;
+		setobj(func, tm);
+		setobj(func + 1, &o);
+		L->top += 2;
+
+		int status = luaD_pcall(L, dothecall, NULL, savestack(L, L->top - 2), 0);
+		g->gcrunning = running; // restore gc states
+
+		if (status != LUA_OK) {
+			luaG_runerror(L, "%s", "call __gc error");
+		}
+	}
+}
+
+static int runafewfinalizers(struct lua_State* L) {
+	int i = 0;
+	for (; G(L)->tobefnz && i < G(L)->gcfinnum; i++) {
+		GCTM(L);
+	}
+
+	G(L)->gcfinnum = (!G(L)->tobefnz) ? 0 : G(L)->gcfinnum * 2;
+	return i;
+}
+
 static void atomic(struct lua_State* L) {
     struct global_State* g = G(L);
     g->gray = g->grayagain;
     g->grayagain = NULL;
 
     g->gcstate = GCSinsideatomic;
+	markmt(L);
     propagateall(L);
+	separate_tobefnz(L);
+	g->gcfinnum = 1;
+	propagate_tobefnz(L);
+	propagateall(L);
     g->currentwhite = cast(lu_byte, otherwhite(g));
 
     luaS_clearcache(L);
@@ -310,24 +410,27 @@ static void entersweep(struct lua_State* L) {
     g->sweepgc = sweeplist(L, &g->allgc, 1);
 }
 
-static void sweepstep(struct lua_State* L) {
+static int sweepstep(struct lua_State* L, int next_state, struct GCObject** next_list) {
     struct global_State* g = G(L);
     if (g->sweepgc) {
         g->sweepgc = sweeplist(L, g->sweepgc, GCMAXSWEEPGCO);
         g->GCestimate = gettotalbytes(g);
 
         if (g->sweepgc) {
-            return;
+            return GCMAXSWEEPGCO * GCPEROBJCOST;
         }
     }
-    g->gcstate = GCSsweepend;
-    g->sweepgc = NULL;
+
+    g->gcstate = next_state;
+    g->sweepgc = next_list;
+	return 0;
 }
 
 static lu_mem singlestep(struct lua_State* L) {
     struct global_State* g = G(L);
     switch(g->gcstate) {
         case GCSpause: {
+			g->gcrunning = 1;
             g->GCmemtrav = 0;
             restart_collection(L);
             g->gcstate = GCSpropagate;
@@ -352,16 +455,30 @@ static lu_mem singlestep(struct lua_State* L) {
             return g->GCmemtrav;
         } break;
         case GCSsweepallgc: {
-            g->GCmemtrav = 0;
-            sweepstep(L);
-            return g->GCmemtrav;
+            return sweepstep(L, GCSsweepfinobjs, &G(L)->finobjs);
         } break;
+		case GCSsweepfinobjs: {	
+			return sweepstep(L, GCSsweeptobefnz, &G(L)->tobefnz);
+		} break;
+		case GCSsweeptobefnz: {
+			return sweepstep(L, GCSsweepend, NULL);
+		} break;
         case GCSsweepend: {
 			makewhite(g->mainthread);
             g->GCmemtrav = 0;
-            g->gcstate = GCSpause;
+            g->gcstate = GCSsweepfin;
             return 0;
         } break;
+		case GCSsweepfin: {
+			if (G(L)->tobefnz) {
+				int i = runafewfinalizers(L);
+				return i * GCPEROBJCOST;
+			}
+			else {
+				g->gcstate = GCSpause;
+				g->gcrunning = 1;
+			}
+		} break;
         default:break;
     }
 
@@ -389,6 +506,12 @@ static void setpause(struct lua_State* L) {
 
 void luaC_step(struct lua_State*L) {
     struct global_State* g = G(L);
+
+	if (!g->gcrunning) {
+		setdebt(L, -GCSTEPSIZE * 10);
+		return;
+	}
+
     l_mem debt = get_debt(L);
     do {
         l_mem work = singlestep(L);
@@ -414,6 +537,12 @@ void luaC_fix(struct lua_State* L, struct GCObject* o) {
     white2gray(o);
 }
 
+void luaC_barrier(struct lua_State* L, struct Table* t, const TValue* o) {
+	struct global_State* g = G(L);
+	lua_assert(isblack(t) && iswhite(o));
+	markvalue(L, o);
+}
+
 void luaC_barrierback_(struct lua_State* L, struct Table* t, const TValue* o) {
     struct global_State* g = G(L);
     lua_assert(isblack(t) && iswhite(o));
@@ -427,4 +556,41 @@ void luaC_freeallobjects(struct lua_State* L) {
     g->currentwhite = WHITEBITS; // all gc objects must reclaim
     sweepwholelist(L, &g->allgc);
     sweepwholelist(L, &g->fixgc);
+	sweepwholelist(L, &g->finobjs);
+	sweepwholelist(L, &g->tobefnz);
+}
+
+void luaC_checkfinalizer(struct lua_State* L, int idx) {
+	TValue* o = index2addr(L, idx);
+	if (!iscollectable(o) || tofinalizer(gcvalue(o)))
+		return;
+
+	TValue* tm = luaT_gettmbyobj(L, o, TM_GC);
+	if (tm) {
+		struct GCObject* gco = G(L)->allgc;
+		struct GCObject* prev = NULL;
+
+		while (gco != NULL) {
+			if (gcvalue(o) == gco) {
+				if (prev) {
+					prev->next = gco->next;
+					gco->next = G(L)->finobjs;
+					G(L)->finobjs = gco;
+				}
+				else {
+					G(L)->allgc = gco->next;
+					gco->next = G(L)->finobjs;
+					G(L)->finobjs = gco;
+				}
+
+				break;
+			}
+
+			prev = gco;
+			gco = gco->next;
+		}
+
+		if (gco != NULL)
+			l_setbit(gco->marked, FINALIZERBIT);
+	}
 }

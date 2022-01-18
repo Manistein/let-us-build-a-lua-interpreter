@@ -22,6 +22,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define luastate_h 
 
 #include "luaobject.h"
+#include "luatm.h"
 
 #define LUA_EXTRASPACE sizeof(void*) 
 #define G(L) ((L)->l_G)
@@ -62,6 +63,7 @@ typedef struct lua_State {
     int stack_size;
     struct lua_longjmp* errorjmp;
     int status;
+	int nny;
     struct lua_State* previous;
     struct CallInfo base_ci;
     struct CallInfo* ci;
@@ -93,17 +95,23 @@ typedef struct global_State {
 
     //gc fields
     lu_byte gcstate;
+	lu_byte gcrunning;
     lu_byte currentwhite;
     struct GCObject* allgc;         // gc root set
     struct GCObject** sweepgc;
     struct GCObject* gray;
     struct GCObject* grayagain;
     struct GCObject* fixgc;         // objects can not collect by gc
+	struct GCObject* finobjs;
+	struct GCObject* tobefnz;
+	int gcfinnum;
     lu_mem totalbytes;
     l_mem GCdebt;                   // GCdebt will be negative
     lu_mem GCmemtrav;               // per gc step traverse memory bytes 
     lu_mem GCestimate;              // after finish a gc cycle,it records total memory bytes (totalbytes + GCdebt)
     int GCstepmul;
+	struct Table* mt[LUA_NUMS];
+	TString* tmnames[TM_TOTAL];
 } global_State;
 
 // GCUnion
@@ -162,5 +170,8 @@ void lua_settop(struct lua_State* L, int idx);
 int lua_gettop(struct lua_State* L);
 void lua_pop(struct lua_State* L);
 TValue* index2addr(struct lua_State* L, int idx);
+
+int lua_setmetatable(struct lua_State* L, int idx);
+struct Table* lua_getmetable(struct lua_State* L, int idx);
 
 #endif 

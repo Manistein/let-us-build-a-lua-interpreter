@@ -1,4 +1,5 @@
-#include "p8_test.h"
+#include "p9_test.h"
+
 #include "../clib/luaaux.h"
 #include "../vm/luagc.h"
 #include "../common/luastring.h"
@@ -10,14 +11,12 @@ static void check_error(struct lua_State* L, int code) {
 	}
 }
 
-void p8_test_main() {
+void p9_test_main() {
 	struct lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
 
-	int ok = luaL_loadfile(L, "../scripts/part08_test.lua");
-	if (ok == LUA_OK) {
-		luaL_pcall(L, 0, 0);
-	}
+	int ok = luaL_loadfile(L, "./scripts/part09_test.lua");
+	check_error(L, ok);
 
 	ok = luaL_pcall(L, 0, 0);
 	check_error(L, ok);

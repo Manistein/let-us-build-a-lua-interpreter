@@ -29,7 +29,7 @@ void* luaM_growaux_(struct lua_State* L, void* ptr, int* size, int element, int 
 	int block_size = *size;
 	if (block_size > limit / 2) {
 		if (block_size > limit) {
-			LUA_ERROR(L, "luaM_growaux_ size too big");
+			luaO_pushfstring(L, "%s", "luaM_growaux_ size too big");
 			luaD_throw(L, LUA_ERRMEM);
 		}
 
@@ -54,6 +54,7 @@ void* luaM_realloc(struct lua_State* L, void* ptr, size_t osize, size_t nsize) {
 
     void* ret = (*g->frealloc)(g->ud, ptr, oldsize, nsize);
     if (ret == NULL && nsize > 0) {
+		luaO_pushfstring(L, "%s", "not enough memory");
         luaD_throw(L, LUA_ERRMEM);
     }
 

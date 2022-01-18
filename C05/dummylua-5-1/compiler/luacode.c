@@ -196,7 +196,14 @@ void luaK_infix(FuncState* fs, int op, expdesc* e) {
 		luaK_goiffalse(fs, e);
 	} break;
 	case BINOPR_CONCAT: {
-		luaK_exp2nextreg(fs, e);
+		if (e->k != VCALL) {
+			luaK_exp2nextreg(fs, e);
+		}
+		else {
+			e->k = VNONRELOC;
+			e->u.info = fs->freereg;
+			luaK_reserveregs(fs, 1);
+		}
 	} break;
 	case BINOPR_ADD: case BINOPR_SUB: case BINOPR_MUL: case BINOPR_DIV:
 	case BINOPR_IDIV: case BINOPR_MOD: case BINOPR_POW: case BINOPR_BAND:
@@ -210,7 +217,7 @@ void luaK_infix(FuncState* fs, int op, expdesc* e) {
 		luaK_exp2RK(fs, e);
 	} break;
 	default: {
-		printf("luaK_infix:unknow binopr:%d \n", op);
+		luaO_pushfstring(fs->ls->L, "luaK_infix:unknow binopr:%d \n", op);
 		luaD_throw(fs->ls->L, LUA_ERRPARSER);
 	} break;
 	}
@@ -242,7 +249,7 @@ static void codecmp(FuncState* fs, int op, expdesc* e1, expdesc* e2) {
 		luaK_codeABC(fs, OP_LE, 1, e1->u.info, e2->u.info);
 	} break;
 	default: {
-		printf("unknow compare operator:%d \n", op);
+		luaO_pushfstring(fs->ls->L, "unknow compare operator:%d \n", op);
 		luaD_throw(fs->ls->L, LUA_ERRPARSER);
 	} break;
 	}
@@ -259,7 +266,15 @@ void luaK_posfix(FuncState* fs, int op, expdesc* e1, expdesc* e2) {
 		*e1 = *e2;
 	} break;
 	case BINOPR_CONCAT: {
-		luaK_exp2nextreg(fs, e2);
+		if (e2->k != VCALL) {
+			luaK_exp2nextreg(fs, e2);
+		}
+		else {
+			e2->k = VNONRELOC;
+			e2->u.info = fs->freereg;
+			luaK_reserveregs(fs, 1);
+		}
+
 		fs->freereg -= 2;
 		luaK_codeABC(fs, OP_CONCAT, fs->freereg, e1->u.info, e2->u.info);
 		luaK_reserveregs(fs, 1);
@@ -278,7 +293,7 @@ void luaK_posfix(FuncState* fs, int op, expdesc* e1, expdesc* e2) {
 		codecmp(fs, op, e1, e2);
 	} break;
 	default: {
-		printf("luaK_posfix:unknow binopr:%d \n", op);
+		luaO_pushfstring(fs->ls->L, "luaK_posfix:unknow binopr:%d \n", op);
 		luaD_throw(fs->ls->L, LUA_ERRPARSER);
 	} break;
 	}
@@ -539,6 +554,12 @@ int luaK_codeABC(FuncState* fs, int opcode, int a, int b, int c) {
 	Instruction i = (b << POS_B) | (c << POS_C) | (a << POS_A) | opcode;
 	fs->p->code[fs->pc] = i;
 
+	luaM_growvector(fs->ls->L, fs->p->line, fs->pc + 1, fs->p->sizeline, int, INT_MAX);
+	for (int i = fs->pc; i < fs->p->sizeline; i++) {
+		fs->p->line[i] = 0;
+	}
+	fs->p->line[fs->pc] = fs->ls->linenumber;
+
 	return fs->pc++;
 }
 
@@ -548,6 +569,12 @@ int luaK_codeABx(FuncState* fs, int opcode, int a, int bx) {
 	luaM_growvector(fs->ls->L, fs->p->code, fs->pc + 1, fs->p->sizecode, Instruction, INT_MAX);
 	Instruction i = (bx << POS_C) | (a << POS_A) | opcode;
 	fs->p->code[fs->pc] = i;
+
+	luaM_growvector(fs->ls->L, fs->p->line, fs->pc + 1, fs->p->sizeline, int, INT_MAX);
+	for (int i = fs->pc; i < fs->p->sizeline; i++) {
+		fs->p->line[i] = 0;
+	}
+	fs->p->line[fs->pc] = fs->ls->linenumber;
 
 	return fs->pc++;
 }

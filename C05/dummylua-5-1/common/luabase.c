@@ -5,6 +5,7 @@
 #include "lua.h"
 #include "../vm/luado.h"
 #include "luatable.h"
+#include "luadebug.h"
 
 #define MAX_NUMBER_STR_SIZE 64
 
@@ -84,8 +85,7 @@ static int ltostring(struct lua_State* L) {
 static int ipairs(struct lua_State* L) {
 	StkId t = L->top - 2;
 	if (!ttistable(t)) {
-		printf("ipairs:target is not a table");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "ipairs:target is not a table");
 	}
 	
 	StkId key = L->top - 1;
@@ -114,8 +114,7 @@ static int luaB_ipairs(struct lua_State* L) {
 static int pairs(struct lua_State* L) {
 	StkId t = L->top - 2;
 	if (!ttistable(t)) {
-		printf("pairs:target is not a table");
-		luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "pairs:target is not a table");
 	}
 
 	StkId key = L->top - 1;
@@ -137,11 +136,26 @@ static int luaB_pairs(struct lua_State* L) {
 	return 3;
 }
 
+static int luaB_setmetatable(struct lua_State* L) {
+	return lua_setmetatable(L, -2);
+}
+
+static int luaB_getmetatable(struct lua_State* L) {
+	struct Table* mt = lua_getmetable(L, -1);
+	TValue o;
+	setgco(&o, obj2gco(mt));
+	setobj(L->top - 1, &o);
+	increase_top(L);
+	return 1;
+}
+
 const lua_Reg base_reg[] = {
 	{ "print", lprint },
 	{ "tostring", ltostring },
 	{ "ipairs", luaB_ipairs },
 	{ "pairs", luaB_pairs },
+	{ "setmetatable", luaB_setmetatable },
+	{ "getmetatable", luaB_getmetatable },
 	{ NULL, NULL },
 };
 

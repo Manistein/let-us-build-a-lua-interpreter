@@ -21,6 +21,9 @@ Proto* luaF_newproto(struct lua_State* L) {
 	f->sizeupvalues = 0;
 	f->source = NULL;
 	f->maxstacksize = 0;
+	f->line = NULL;
+	f->sizecode = 0;
+	f->sizeline = 0;
 
 	return f;
 }
@@ -46,6 +49,10 @@ void luaF_freeproto(struct lua_State* L, Proto* f) {
 		luaM_free(L, f->upvalues, sizeof(Upvaldesc) * f->sizeupvalues);
 	}
 
+	if (f->line) {
+		luaM_free(L, f->line, sizeof(int) * f->sizeline);
+	}
+
 	luaM_free(L, f, sizeof(Proto));
 }
 
@@ -56,6 +63,7 @@ lu_mem luaF_sizeproto(struct lua_State* L, Proto* f) {
 	sz += sizeof(LocVar) * f->sizelocvar;
 	sz += sizeof(Proto*) * f->sizep;
 	sz += sizeof(Upvaldesc) * f->sizeupvalues;
+	sz += sizeof(int) * f->sizeline;
 	return sz;
 }
 

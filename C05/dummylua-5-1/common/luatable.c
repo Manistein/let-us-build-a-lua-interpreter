@@ -25,6 +25,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "../vm/luavm.h"
 #include "../vm/luado.h"
 #include "luaobject.h"
+#include "luadebug.h"
 
 #define MAXASIZE (1u << MAXABITS)
 
@@ -96,7 +97,7 @@ static void setnodesize(struct lua_State* L, struct Table* t, int size) {
         int lsize = luaO_ceillog2(size);
         t->lsizenode = (unsigned int)lsize;
         if (t->lsizenode > (sizeof(int) * CHAR_BIT - 1)) {
-            luaD_throw(L, LUA_ERRRUN);
+			luaG_runerror(L, "table size is too big:%d", cast(int, t->lsizenode));
         }
 
         int node_size = twoto(lsize);
@@ -122,6 +123,7 @@ struct Table* luaH_new(struct lua_State* L) {
     t->lsizenode = 0;
     t->lastfree = NULL;
     t->gclist = NULL;
+	t->metatable = NULL;
     
     setnodesize(L, t, 0);
     return t;
@@ -265,7 +267,7 @@ int luaH_resize(struct lua_State* L, struct Table* t, unsigned int asize, unsign
     auxnode.size = hsize;
     if (luaD_rawrunprotected(L, &aux_set_node_size, &auxnode) != LUA_OK) {
         luaM_reallocvector(L, t->array, t->arraysize, old_asize, TValue);
-        luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "luaH_resize error");
     }
 
     // shrink array
@@ -390,13 +392,13 @@ static void rehash(struct lua_State* L, struct Table* t, const TValue* key) {
 
 TValue* luaH_newkey(struct lua_State* L, struct Table* t, const TValue* key) {
     if (ttisnil(key)) {
-        luaD_throw(L, LUA_ERRRUN);
+		luaG_runerror(L, "%s", "table key is nil");
     }
 
     TValue k;
     if (ttisfloat(key)) {
         if (lua_numisnan(key->value_.n)) {
-            luaD_throw(L, LUA_ERRRUN);
+			luaG_runerror(L, "%s", "table key is NAN");
         }
 
         k.value_.i = l_hashfloat(key->value_.n);
@@ -483,7 +485,7 @@ static unsigned int findindex(struct lua_State* L, struct Table* t, const TValue
             }
 
             if (n->key.nk.next == 0) {
-                luaD_throw(L, LUA_ERRRUN);
+				luaG_runerror(L, "%s", "can not find key");
             }
             n += n->key.nk.next;
         }

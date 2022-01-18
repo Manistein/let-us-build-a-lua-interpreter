@@ -29,12 +29,16 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define GCSatomic       2
 #define GCSinsideatomic 3
 #define GCSsweepallgc   4
-#define GCSsweepend     5
+#define GCSsweepfinobjs 5
+#define GCSsweeptobefnz 6
+#define GCSsweepfin     7
+#define GCSsweepend     8
 
 // Color
 #define WHITE0BIT       0
 #define WHITE1BIT       1
 #define BLACKBIT        2
+#define FINALIZERBIT    3
 
 // Bit operation
 #define bitmask(b) (1<<b)
@@ -57,6 +61,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define isdeadm(ow, m) (!((m ^ WHITEBITS) & (ow)))
 #define isdead(g, o) isdeadm(otherwhite(g), (o)->marked)
 #define changewhite(o) ((o)->marked ^= WHITEBITS)
+#define tofinalizer(o) (testbit((o)->marked, FINALIZERBIT))
 
 #define obj2gco(o) (&cast(union GCUnion*, o)->gc)
 #define gco2th(o)  check_exp((o)->tt_ == LUA_TTHREAD, &cast(union GCUnion*, o)->th)
@@ -66,6 +71,12 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define gco2cclosure(o) check_exp((o)->tt_ == LUA_TCCL, &cast(union GCUnion*, o)->cl.c)
 #define gco2proto(o) check_exp((o)->tt_ == LUA_TPROTO, &cast(union GCUnion*, o)->p)
 #define gcvalue(o) ((o)->value_.gc)
+#define hvalue(o) (gco2tbl(gcvalue(o)))
+#define tsvalue(o) (gco2ts(gcvalue(o)))
+#define thvalue(o) (gco2th(gcvalue(o)))
+#define lclvalue(o) (gco2lclosure(gcvalue(o)))
+#define cclvalue(o) (gco2cclosure(gcvalue(o)))
+#define protovalue(o) (gco2proto(gcvalue(o)))
 
 #define iscollectable(o) \
     ((o)->tt_ == LUA_TTHREAD || \
@@ -74,6 +85,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 	 (o)->tt_ == LUA_TTABLE  || \
 	 (o)->tt_ == LUA_TLCL    || \
 	 (o)->tt_ == LUA_TCCL	 || \
+	 (o)->tt_ == LUA_TUSERDATA || \
 	 (o)->tt_ == LUA_TPROTO	)
 
 #define markobject(L, o) if (iswhite(o)) { reallymarkobject(L, obj2gco(o)); }
@@ -86,12 +98,16 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 
 #define luaC_barrierback(L, t, o) \
     (isblack(t) && iscollectable(o) && iswhite(gcvalue(o))) ? luaC_barrierback_(L, t, o) : cast(void, 0)
+#define luaC_objbarrier(L, p, o) \
+	(isblack(p) && iswhite(gcvalue(o))) ? luaC_barrier(L, p, o) : cast(void, 0)
 
 struct GCObject* luaC_newobj(struct lua_State* L, lu_byte tt_, size_t size);
 void luaC_step(struct lua_State* L);
 void luaC_fix(struct lua_State* L, struct GCObject* o); // GCObject can not collect
+void luaC_barrier(struct lua_State* L, struct Table* t, const TValue* o);
 void luaC_barrierback_(struct lua_State* L, struct Table* t, const TValue* o);
 void reallymarkobject(struct lua_State* L, struct GCObject* gc);
 void luaC_freeallobjects(struct lua_State* L);
+void luaC_checkfinalizer(struct lua_State* L, int idx);
 
 #endif 

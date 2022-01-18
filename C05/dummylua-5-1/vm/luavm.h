@@ -26,25 +26,25 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 
 #define luaV_fastget(L, t, k, get, slot) \
     (!ttistable(t) ? (slot = NULL, 0) : \
-     (slot = get(L, t, k), !ttisnil(slot)))
+     (slot = (TValue*)get(L, hvalue(t), k), !ttisnil(slot)))
 
-#define luaV_gettable(L, t, k, v) { const TValue* slot = NULL; \
-    if (luaV_fastget(L, t, k, luaH_get, slot)) { setobj(v, cast(TValue*, slot));  } \
-    else luaV_finishget(L, t, v, slot); }
+#define luaV_gettable(L, t, k, v) { TValue* slot = NULL; \
+    if (luaV_fastget(L, t, k, luaH_get, slot)) { luaC_barrierback(L, hvalue(t), (const TValue*)slot); setobj(v, slot);  } \
+    else luaV_finishget(L, t, k, v, slot); }
 
 #define luaV_fastset(L, t, k, v, get, slot) \
     (!ttistable(t) ? (slot = NULL, 0) : \
-     (slot = cast(TValue*, get(L, t, k)), \
+     (slot = cast(TValue*, get(L, hvalue(t), k)), \
         (ttisnil(slot) ? (0) : \
             (setobj(slot, v), \
-            luaC_barrierback(L, t, slot), 1))))
+            luaC_barrierback(L, hvalue(t), slot), 1))))
 
 #define luaV_settable(L, t, k, v) { TValue* slot = NULL; \
     if (!luaV_fastset(L, t, k, v, luaH_get, slot)) \
         luaV_finishset(L, t, k, v, slot);}
 
-void luaV_finishget(struct lua_State* L, struct Table* t, StkId val, const TValue* slot);
-void luaV_finishset(struct lua_State* L, struct Table* t, const TValue* key, StkId val, const TValue* slot);
+void luaV_finishget(struct lua_State* L, TValue* t, const StkId key, StkId val, TValue* slot);
+void luaV_finishset(struct lua_State* L, TValue* t, const TValue* key, StkId val, TValue* slot);
 int luaV_eqobject(struct lua_State* L, const TValue* a, const TValue* b);
 
 int luaV_tonumber(struct lua_State* L, const TValue* v, lua_Number* n);
