@@ -292,16 +292,14 @@ int lua_settable(struct lua_State* L, int idx) {
 		return LUA_ERRERR;
 	}
 
-    struct Table* t = gco2tbl(gcvalue(o));
-    luaV_settable(L, t, L->top - 2, L->top - 1);
+    luaV_settable(L, o, L->top - 2, L->top - 1);
     L->top = L->top - 2;
     return LUA_OK;
 }
 
 int lua_gettable(struct lua_State* L, int idx) {
     TValue* o = index2addr(L, idx);
-    struct Table* t = gco2tbl(gcvalue(o));
-    luaV_gettable(L, t, L->top - 1, L->top - 1);
+    luaV_gettable(L, o, L->top - 1, L->top - 1);
     return LUA_OK;
 }
 
