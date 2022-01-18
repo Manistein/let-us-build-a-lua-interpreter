@@ -58,7 +58,7 @@ TValue* luaT_gettmbyobj(struct lua_State* L, TValue* o, TMS event) {
 			return NULL;
 		}
 
-		TValue* tm = luaH_getstr(L, hvalue(o)->metatable, luaS_newliteral(L, s_tm[(int)event]));
+		TValue* tm = (TValue*)luaH_getstr(L, hvalue(o)->metatable, luaS_newliteral(L, s_tm[(int)event]));
 		return ttisnil(tm) ? NULL : tm;
 	} break;
 	case LUA_TUSERDATA: {

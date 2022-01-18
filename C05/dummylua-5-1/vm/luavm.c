@@ -227,10 +227,10 @@ static void op_gettable(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 
 	if (ISK(c)) {
 		int k = c - MAININDEXRK - 1;
-		luaV_gettable(L, vt, (const TValue*)&cl->p->k[k], ra);
+		luaV_gettable(L, vt, &cl->p->k[k], ra);
 	}
 	else {
-		luaV_gettable(L, vt, (const TValue*)(L->ci->l.base + c), ra);
+		luaV_gettable(L, vt, L->ci->l.base + c, ra);
 	}
 }
 
