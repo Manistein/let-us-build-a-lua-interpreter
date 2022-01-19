@@ -50,6 +50,7 @@ typedef void* (*lua_Alloc)(void* ud, void* ptr, size_t osize, size_t nsize);
 // GCObject
 #define CommonHeader struct GCObject* next; lu_byte tt_; lu_byte marked
 #define LUA_GCSTEPMUL 200
+#define LUA_GCPAUSE 200
 
 // Closure
 #define ClosureHeader CommonHeader; int nupvalues; struct GCObject* gclist
@@ -207,6 +208,20 @@ typedef union Closure {
 	LClosure l;
 	CClosure c;
 } Closure;
+
+typedef struct Udata {
+	CommonHeader;
+	struct Table* metatable;
+	int ttuv_;
+	int len;
+	Value user_;
+} Udata;
+
+#define getudatamem(o) (cast(char*,o)+sizeof(Udata))
+#define setuservalue(u, o) \
+			(u)->ttuv_ = (o)->tt_; (u)->user_ = (o)->value_
+#define getuservalue(u, o) \
+			(o)->tt_ = (u)->ttuv_; (o)->value_ = (u)->user_
 
 int luaO_ceillog2(lua_Integer value);
 int luaO_arith(struct lua_State* L, int op, TValue* v1, TValue* v2); // the result will store in v1

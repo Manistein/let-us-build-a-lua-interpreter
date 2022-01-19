@@ -42,4 +42,6 @@ unsigned int luaS_hash(struct lua_State* L, const char* str, unsigned int l, uns
 unsigned int luaS_hashlongstr(struct lua_State* L, struct TString* ts);
 struct TString* luaS_createlongstr(struct lua_State* L, const char* str, size_t l);
 
+Udata* luaS_newuserdata(struct lua_State* L, int size);
+
 #endif 

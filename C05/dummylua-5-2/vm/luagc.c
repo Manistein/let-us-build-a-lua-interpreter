@@ -79,6 +79,23 @@ void reallymarkobject(struct lua_State* L, struct GCObject* gco) {
             struct TString* ts = gco2ts(gco);
             g->GCmemtrav += sizelstring(ts->u.lnglen);
         } break;
+		case LUA_TUSERDATA: {
+			gray2black(gco);
+
+			TValue uvalue;
+			Udata* u = gco2u(gco);
+			getuservalue(u, &uvalue);
+			if (u->metatable) {
+				markobject(L, u->metatable);
+			}
+
+			if (iscollectable(&uvalue) && iswhite(gcvalue(&uvalue))) {
+				reallymarkobject(L, gcvalue(&uvalue));
+			}
+
+			g->GCmemtrav += sizeof(Udata);
+			g->GCmemtrav += u->len;
+		} break;
         default:break;
     }
 }
@@ -239,31 +256,31 @@ static void markmt(struct lua_State* L) {
 }
 
 static void separate_tobefnz(struct lua_State* L) {
-	struct GCObject* prev = NULL;
+	if (!G(L)->finobjs) {
+		return;
+	}
+
+	struct GCObject* finobj = NULL;
 	struct GCObject* next = NULL;
 	for (struct GCObject* gco = G(L)->finobjs; gco != NULL;) {
 		next = gco->next;
 
 		if (iswhite(gco)) {
-			if (prev) {
-				prev->next = gco->next;
-				gco->next = G(L)->tobefnz;
-				G(L)->tobefnz = gco;
-			}
-			else {
-				G(L)->allgc = gco->next;
-				gco->next = G(L)->tobefnz;
-				G(L)->tobefnz = gco;
-			}
+			gco->next = G(L)->tobefnz;
+			G(L)->tobefnz = gco;
+		}
+		else {
+			gco->next = finobj;
+			finobj = gco;
 		}
 
-		prev = gco;
 		gco = next;
 	}
+	G(L)->finobjs = finobj;
 }
 
 static void propagate_tobefnz(struct lua_State* L) {
-	for (struct GCObject* gco = G(L)->finobjs; gco != NULL; gco = gco->next) {
+	for (struct GCObject* gco = G(L)->tobefnz; gco != NULL; gco = gco->next) {
 		markobject(L, gco);
 	}
 }
@@ -295,7 +312,7 @@ static void GCTM(struct lua_State* L) {
 		lu_byte running = g->gcrunning;
 		g->gcrunning = 0; // stop to gc now
 
-		StkId func = L->top - 1;
+		StkId func = L->top;
 		setobj(func, tm);
 		setobj(func + 1, &o);
 		L->top += 2;
@@ -375,6 +392,12 @@ static lu_mem freeobj(struct lua_State* L, struct GCObject* gco) {
 			struct Proto* f = gco2proto(gco);
 			lu_mem sz = luaF_sizeproto(L, f);
 			luaF_freeproto(L, f);
+			return sz;
+		} break;
+		case LUA_TUSERDATA: {
+			Udata* u = gco2u(gco);
+			lu_mem sz = sizeof(Udata) + u->len;
+			luaM_free(L, u, sz);
 			return sz;
 		} break;
         default:{
@@ -487,7 +510,11 @@ static lu_mem singlestep(struct lua_State* L) {
 
 static void setdebt(struct lua_State* L, l_mem debt) {
     struct global_State* g = G(L);
-    lu_mem totalbytes = gettotalbytes(g);
+    l_mem totalbytes = gettotalbytes(g);
+
+	if (debt < (totalbytes - MAX_LMEM)) {
+		debt = totalbytes - MAX_LMEM;
+	}
 
     g->totalbytes = totalbytes - debt;
     g->GCdebt = debt;
@@ -497,10 +524,11 @@ static void setdebt(struct lua_State* L, l_mem debt) {
 // again
 static void setpause(struct lua_State* L) {
     struct global_State* g = G(L);
-    l_mem estimate = g->GCestimate / GCPAUSE;
-    estimate = (estimate * g->GCstepmul) >= MAX_LMEM ? MAX_LMEM : estimate * g->GCstepmul;
+    l_mem estimate = g->GCestimate / PAUSEADJ;
+	lu_mem threshold = (g->gcpause < MAX_LMEM / estimate) ?
+		estimate * g->gcpause : MAX_LMEM;
     
-    l_mem debt = g->GCestimate - estimate;
+    l_mem debt = gettotalbytes(g) - threshold;
     setdebt(L, debt);
 }
 
@@ -593,4 +621,11 @@ void luaC_checkfinalizer(struct lua_State* L, int idx) {
 		if (gco != NULL)
 			l_setbit(gco->marked, FINALIZERBIT);
 	}
+}
+
+void luaC_fullgc(struct lua_State* L) {
+	do {
+		singlestep(L);
+	} while (G(L)->gcstate != GCSpause);
+	setpause(L);
 }

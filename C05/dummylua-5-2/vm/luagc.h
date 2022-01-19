@@ -70,6 +70,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define gco2lclosure(o) check_exp((o)->tt_ == LUA_TLCL, &cast(union GCUnion*, o)->cl.l)
 #define gco2cclosure(o) check_exp((o)->tt_ == LUA_TCCL, &cast(union GCUnion*, o)->cl.c)
 #define gco2proto(o) check_exp((o)->tt_ == LUA_TPROTO, &cast(union GCUnion*, o)->p)
+#define gco2u(o) check_exp((o)->tt_ == LUA_TUSERDATA, &cast(union GCUnion*, o)->u)
 #define gcvalue(o) ((o)->value_.gc)
 #define hvalue(o) (gco2tbl(gcvalue(o)))
 #define tsvalue(o) (gco2ts(gcvalue(o)))
@@ -77,6 +78,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define lclvalue(o) (gco2lclosure(gcvalue(o)))
 #define cclvalue(o) (gco2cclosure(gcvalue(o)))
 #define protovalue(o) (gco2proto(gcvalue(o)))
+#define uvalue(o) (gco2u(gcvalue(o)))
 
 #define iscollectable(o) \
     ((o)->tt_ == LUA_TTHREAD || \
@@ -109,5 +111,6 @@ void luaC_barrierback_(struct lua_State* L, struct Table* t, const TValue* o);
 void reallymarkobject(struct lua_State* L, struct GCObject* gc);
 void luaC_freeallobjects(struct lua_State* L);
 void luaC_checkfinalizer(struct lua_State* L, int idx);
+void luaC_fullgc(struct lua_State* L);
 
 #endif 

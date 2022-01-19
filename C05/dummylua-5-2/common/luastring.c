@@ -213,3 +213,13 @@ unsigned int luaS_hashlongstr(struct lua_State* L, struct TString* ts) {
 struct TString* luaS_createlongstr(struct lua_State* L, const char* str, size_t l) {
     return createstrobj(L, str, LUA_LNGSTR, l, G(L)->seed);
 }
+
+Udata* luaS_newuserdata(struct lua_State* L, int size) {
+	struct GCObject* gco = luaC_newobj(L, LUA_TUSERDATA, sizeof(Udata) + size);
+	Udata* u = gco2u(gco);
+	u->metatable = NULL;
+	u->len = size;
+	setuservalue(u, luaO_nilobject);
+
+	return u;
+}

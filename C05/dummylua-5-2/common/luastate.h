@@ -30,7 +30,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define STEPMULADJ 200
 #define GCSTEPMUL 200 
 #define GCSTEPSIZE 2048  //2kb
-#define GCPAUSE 100
+#define PAUSEADJ 100
 
 // size for string cache
 #define STRCACHE_M 53
@@ -109,6 +109,7 @@ typedef struct global_State {
     l_mem GCdebt;                   // GCdebt will be negative
     lu_mem GCmemtrav;               // per gc step traverse memory bytes 
     lu_mem GCestimate;              // after finish a gc cycle,it records total memory bytes (totalbytes + GCdebt)
+	lu_mem gcpause;					// size of pause between sucessive GCs
     int GCstepmul;
 	struct Table* mt[LUA_NUMS];
 	TString* tmnames[TM_TOTAL];
@@ -122,6 +123,7 @@ union GCUnion {
     struct Table tbl;
 	Closure cl;
 	Proto p;
+	Udata u;
 };
 
 struct lua_State* lua_newstate(lua_Alloc alloc, void* ud);
@@ -173,5 +175,6 @@ TValue* index2addr(struct lua_State* L, int idx);
 
 int lua_setmetatable(struct lua_State* L, int idx);
 struct Table* lua_getmetable(struct lua_State* L, int idx);
+Udata* lua_touserdata(struct lua_State* L, int idx);
 
 #endif 

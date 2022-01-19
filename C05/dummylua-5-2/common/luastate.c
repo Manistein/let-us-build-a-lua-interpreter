@@ -126,6 +126,7 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
     g->GCmemtrav = 0;
     g->GCestimate = 0;
     g->GCstepmul = LUA_GCSTEPMUL;
+	g->gcpause = LUA_GCPAUSE;
     g->seed = makeseed(L);
 	g->gcfinnum = 0;
 
@@ -312,6 +313,10 @@ int lua_setfield(struct lua_State* L, int idx, const char* k)
 	struct GCObject* gco = obj2gco(s);
 	setgco(L->top - 2, gco);
 
+	if (idx != LUA_REGISTRYINDEX && idx < 0) {
+		idx -= 1;
+	}
+
 	return lua_settable(L, idx);
 }
 
@@ -406,7 +411,13 @@ int lua_setmetatable(struct lua_State* L, int idx) {
 		luaC_checkfinalizer(L, idx);
 	} break;
 	case LUA_TUSERDATA: {
-		// TODO
+		Udata* u = gco2u(gcvalue(obj));
+		u->metatable = mt;
+
+		TValue o;
+		setgco(&o, obj2gco(mt));
+		luaC_objbarrier(L, mt, &o);
+		luaC_checkfinalizer(L, idx);
 	} break;
 	default: {
 		G(L)->mt[novariant(obj)] = mt;
@@ -431,6 +442,11 @@ struct Table* lua_getmetable(struct lua_State* L, int idx) {
 		return G(L)->mt[novariant(obj)];
 	} break;
 	}
+}
+
+Udata* lua_touserdata(struct lua_State* L, int idx) {
+	TValue* v = index2addr(L, idx);
+	return gco2u(gcvalue(v));
 }
 
 lua_Integer lua_tointegerx(struct lua_State* L, int idx, int* isnum) {
