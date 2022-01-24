@@ -13,7 +13,7 @@ void p11_test_main() {
 	struct lua_State* L = luaL_newstate();
 	luaL_openlibs(L);
 
-	int ok = luaL_loadfile(L, "./scripts/part11_test.lua");
+	int ok = luaL_loadfile(L, "../scripts/part11_test.lua");
 	check_error(L, ok);
 
 	ok = luaL_pcall(L, 0, 0);
