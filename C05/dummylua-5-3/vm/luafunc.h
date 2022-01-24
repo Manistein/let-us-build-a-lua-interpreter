@@ -31,7 +31,10 @@ struct UpVal {
 	TValue* v;  // point to stack or its own value (when open)
 	int refcount;
 	union {
-		struct UpVal* next; // next open upvalue
+		struct {
+			struct UpVal* next; // next open upvalue
+			int touched;
+		} open;
 		TValue value;		// its value (when closed)
 	} u;
 };
@@ -47,5 +50,7 @@ CClosure* luaF_newCclosure(struct lua_State* L, lua_CFunction func, int nup);
 void luaF_freeCclosure(struct lua_State* L, CClosure* cc);
 
 void luaF_initupvals(struct lua_State* L, LClosure* cl);
+UpVal* luaF_findupval(struct lua_State* L, LClosure* cl, int upval_index);
+void luaF_close(struct lua_State* L, LClosure* cl);
 
 #endif

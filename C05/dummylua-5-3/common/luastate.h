@@ -72,6 +72,7 @@ typedef struct lua_State {
     ptrdiff_t errorfunc;
     int ncalls;
     struct GCObject* gclist;
+	struct UpVal* openupval;
 } lua_State;
 
 // only for short string

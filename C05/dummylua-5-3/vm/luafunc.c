@@ -117,3 +117,59 @@ void luaF_initupvals(struct lua_State* L, LClosure* cl) {
 		}
 	}
 }
+
+UpVal* luaF_findupval(struct lua_State* L, LClosure* cl, int upval_index) {
+	StkId base = L->ci->l.base;
+	TValue* level = base + upval_index;
+
+	UpVal* openval = L->openupval;
+	UpVal* prev = NULL;
+	while (openval != NULL && openval->v >= level) {
+		if (openval->v == level) {
+			openval->refcount++;
+			return openval;
+		}
+
+		prev = openval;
+		openval = openval->u.open.next;
+	}
+
+	UpVal* new_upval = luaM_realloc(L, NULL, 0, sizeof(UpVal));
+	new_upval->u.open.next = openval;
+	new_upval->refcount = 1;
+	new_upval->v = level;
+
+	if (prev)
+		prev->u.open.next = new_upval;
+	else
+		L->openupval = new_upval;
+	
+	return new_upval;
+}
+
+void luaF_close(struct lua_State* L, LClosure* cl) {
+	if (!L->openupval)
+		return;
+
+	// close open upvalue
+	UpVal* upval = L->openupval;
+	StkId base = L->ci->l.base;
+	while (upval && upval->v >= base) {
+		UpVal* current = upval;
+		upval = upval->u.open.next;
+
+		if (current->refcount <= 0) {
+			luaM_free(L, current, sizeof(UpVal));
+			current = NULL;
+		}
+		else {
+			setobj(&current->u.value, current->v);
+			current->v = &current->u.value;
+
+			if (G(L)->gcstate <= GCSatomic)
+				markvalue(L, current->v);
+		}
+	}
+
+	L->openupval = upval;
+}

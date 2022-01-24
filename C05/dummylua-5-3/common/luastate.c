@@ -49,6 +49,7 @@ static void stack_init(struct lua_State* L) {
     L->errorjmp = NULL;
     L->top = L->stack;
     L->errorfunc = 0;
+	L->openupval = NULL;
 
     int i;
     for (i = 0; i < L->stack_size; i++) {

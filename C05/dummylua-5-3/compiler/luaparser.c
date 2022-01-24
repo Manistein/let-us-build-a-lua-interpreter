@@ -320,7 +320,8 @@ static void simpleexp(FuncState* fs, expdesc* e) {
 		constructor(fs->ls->L, fs, e);
 	} break;
 	case TK_FUNCTION:
-		luaX_syntaxerror(ls->L, ls, "unsupport syntax");
+		luaX_next(fs->ls->L, fs->ls);
+		funcbody(fs->ls->L, fs->ls, e, 0);
 		break;
 	default:
 		suffixedexp(fs->ls->L, fs->ls, fs, e);

@@ -207,6 +207,8 @@ static void op_call(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) 
 }
 
 static void op_return(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
+	luaF_close(L, cl);
+
 	int b = GET_ARG_B(i);
 	luaD_poscall(L, ra, b ? (b - 1) : (int)(L->top - ra));
 	if (L->ci->callstatus & CIST_LUA) {
@@ -663,8 +665,21 @@ static void op_closure(struct lua_State* L, LClosure* cl, StkId ra, Instruction 
 	new_cl->p = proto;
 	setgco(ra, obj2gco(new_cl));
 
-	// TODO we just ignore upvalues in this version
 	new_cl->upvals[0] = cl->upvals[0];
+	for (int i = 1; i < proto->sizeupvalues; i ++) {
+		Upvaldesc* up = &proto->upvalues[i];
+		if (!up->name) {
+			continue;
+		}
+
+		if (up->in_stack) {
+			UpVal* found = luaF_findupval(L, cl, up->idx);
+			new_cl->upvals[i] = found;
+		}
+		else {
+			new_cl->upvals[i] = cl->upvals[i];
+		}
+	}
 }
 
 int luaV_tonumber(struct lua_State* L, const TValue* v, lua_Number* n) {

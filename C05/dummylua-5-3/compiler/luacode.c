@@ -317,7 +317,7 @@ void luaK_storevar(FuncState* fs, expdesc* var, expdesc* ex) {
 	} break;
 	case VUPVAL: {
 		int e = luaK_exp2anyreg(fs, ex);
-		luaK_codeABC(fs, OP_SETUPVAL, var->u.info, e, 0);
+		luaK_codeABC(fs, OP_SETUPVAL, e, var->u.info, 0);
 	} break;
 	case VINDEXED: {
 		int e = luaK_exp2RK(fs, ex);

@@ -187,7 +187,16 @@ static lu_mem traverse_proto(struct lua_State* L, struct Proto* p) {
 static lu_mem traverse_lclosure(struct lua_State* L, struct LClosure* cl) {
 	markobject(L, cl->p);
 
-	// TODO process upvalues;
+	for (int i = 1; i < cl->nupvalues; i++) {
+		UpVal* up = cl->upvals[i];
+		if (!up)
+			continue;
+
+		if (!upisopen(up)) {
+			markvalue(L, up->v);
+		}
+	}
+
 	return sizeof(struct LClosure);
 }
 
