@@ -1,10 +1,11 @@
-#include "test/p10_test.h"
+#include "test/p11_test.h"
 #ifdef _WINDOWS_PLATFORM_
 #include <process.h>
 #endif
 
 int main(int argc, char** argv) {
-	p10_test_main();
+	
+	p11_test_main();
 
 #ifdef _WINDOWS_PLATFORM_
 	system("pause");
