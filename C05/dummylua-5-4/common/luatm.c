@@ -9,7 +9,7 @@
 static const char* s_tm[] = {
 	"__lt", "__gt", "__le", "__ge", "__eq", "__concat",
 	"__add", "__sub", "__mul", "__div", "__idiv", "__pow", "__band", "__bor", "__xor", "__shl", "__shr", "__mod",
-	"__index", "__newindex", "__gc"
+	"__index", "__newindex", "__gc", "__mode"
 };
 
 void luaT_init(struct lua_State* L) {

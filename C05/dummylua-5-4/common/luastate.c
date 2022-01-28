@@ -123,6 +123,11 @@ struct lua_State* lua_newstate(lua_Alloc alloc, void* ud) {
     g->sweepgc = NULL;
     g->gray = NULL;
     g->grayagain = NULL;
+
+	g->ephemeron = NULL;
+	g->weak = NULL;
+	g->allweak = NULL;
+
     g->GCdebt = 0;
     g->GCmemtrav = 0;
     g->GCestimate = 0;

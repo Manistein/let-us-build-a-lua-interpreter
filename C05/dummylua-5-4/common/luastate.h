@@ -105,6 +105,9 @@ typedef struct global_State {
     struct GCObject* fixgc;         // objects can not collect by gc
 	struct GCObject* finobjs;
 	struct GCObject* tobefnz;
+	struct GCObject* ephemeron;		// the list of weaktables which contains white-white entry
+	struct GCObject* weak;			// the list of weaktables which are all in 'v' mode
+	struct GCObject* allweak;		// the list of weaktables which are in 'v' mode or in 'kv' mode
 	int gcfinnum;
     lu_mem totalbytes;
     l_mem GCdebt;                   // GCdebt will be negative

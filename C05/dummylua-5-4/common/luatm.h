@@ -29,6 +29,8 @@ typedef enum {
 
 	TM_GC,
 
+	TM_MODE,
+
 	TM_TOTAL
 }TMS;
 

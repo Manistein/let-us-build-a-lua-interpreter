@@ -149,6 +149,11 @@ static int luaB_getmetatable(struct lua_State* L) {
 	return 1;
 }
 
+static int luaB_collectgarbage(struct lua_State* L) {
+	luaC_fullgc(L);
+	return 0;
+}
+
 const lua_Reg base_reg[] = {
 	{ "print", lprint },
 	{ "tostring", ltostring },
@@ -156,6 +161,7 @@ const lua_Reg base_reg[] = {
 	{ "pairs", luaB_pairs },
 	{ "setmetatable", luaB_setmetatable },
 	{ "getmetatable", luaB_getmetatable },
+	{ "collectgarbage", luaB_collectgarbage },
 	{ NULL, NULL },
 };
 

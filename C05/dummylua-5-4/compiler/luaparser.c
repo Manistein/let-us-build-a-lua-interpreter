@@ -505,10 +505,6 @@ static void fieldsel(struct lua_State* L, LexState* ls, FuncState* fs, expdesc* 
 
 static void yindex(struct lua_State* L, FuncState* fs, expdesc* e) {
 	luaX_next(L, fs->ls);
-	
-	if (fs->ls->t.token == TK_NAME) {
-		luaX_syntaxerror(L, fs->ls, "yindex:there is a TK_NAME in square brackets");
-	}
 
 	expr(fs, e);
 	luaK_exp2val(fs, e);

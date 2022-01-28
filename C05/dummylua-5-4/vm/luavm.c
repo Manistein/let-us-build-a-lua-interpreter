@@ -723,10 +723,13 @@ static StkId vmdecode(struct lua_State* L, Instruction i) {
 	return ra;
 }
 
+void print_Instruction(int idx, Instruction i);
 static bool vmexecute(struct lua_State* L, StkId ra, Instruction i) {
 	bool is_loop = true;
 	struct GCObject* gco = gcvalue(L->ci->func);
 	LClosure* cl = gco2lclosure(gco);
+
+	print_Instruction(0, i);
 
 	switch (GET_OPCODE(i)) {
 	case OP_MOVE: {
@@ -966,10 +969,12 @@ static void newframe(struct lua_State* L) {
 	}
 	printf("\n");
 
+	int count = 0;
 	bool is_loop = true;
 	while (is_loop) {
 		Instruction i = vmfetch(L);
 		StkId ra = vmdecode(L, i);
 		is_loop = vmexecute(L, ra, i);
+		count++;
 	}
 }

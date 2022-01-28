@@ -9,7 +9,8 @@ set(CLIB_SRC clib/luaaux.c)
 set(VM_SRC vm/luado.c vm/luagc.c vm/luavm.c vm/luafunc.c vm/luaopcodes.c)
 set(COMPILER_SRC compiler/luazio.c compiler/lualexer.c compiler/luaparser.c compiler/luacode.c)
 set(TEST_SRC test/p1_test.c test/p2_test.c test/p3_test.c test/p4_test.c test/p5_test.c
-	test/p6_test.c test/p7_test.c test/p8_test.c test/p9_test.c test/p10_test.c test/p11_test.c)
+	test/p6_test.c test/p7_test.c test/p8_test.c test/p9_test.c test/p10_test.c test/p11_test.c 
+	test/p12_test.c)
 set(SRC ${COMMON_SRC} ${CLIB_SRC} ${VM_SRC} ${TEST_SRC} ${COMPILER_SRC})
 
 # add the executable

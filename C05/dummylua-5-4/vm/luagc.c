@@ -117,6 +117,7 @@ static l_mem get_debt(struct lua_State* L) {
 static void restart_collection(struct lua_State* L) {
     struct global_State* g = G(L);
     g->gray = g->grayagain = NULL;
+	g->allweak = g->weak = g->ephemeron = NULL;
     markobject(L, g->mainthread); 
     markvalue(L, &g->l_registry);
 }
@@ -128,6 +129,94 @@ static lu_mem traverse_thread(struct lua_State* L, struct lua_State* th) {
     }
 
     return sizeof(struct lua_State) + sizeof(TValue) * th->stack_size + sizeof(struct CallInfo) * th->nci;
+}
+
+static int iscleared(struct lua_State* L, TValue* o) {
+	if (!iscollectable(o)) {
+		return 0;
+	}
+
+	if (ttisshrstr(o) || ttislngstr(o)) {
+		markobject(L, gcvalue(o));
+		return 0;
+	}
+
+	return iswhite(gcvalue(o));
+}
+
+static int traverse_ephemeron(struct lua_State* L, struct Table* t) {
+	int marked = 0;
+	int hascleared = 0;
+	int hasww = 0;
+
+	for (unsigned int i = 0; i < t->arraysize; i ++) {
+		if (valiswhite(&t->array[i])) {
+			markvalue(L, &t->array[i]);
+			marked = 1;
+		}
+	}
+
+	Node* lastnode = getnode(t, twoto(t->lsizenode) - 1);
+	Node* node = getnode(t, 0);
+	for (; t->node && (node <= lastnode); node++) {
+		if (ttisnil(getval(node))) {
+			TValue* key = getkey(node);
+			key->tt_ = LUA_TDEADKEY;
+		}
+		else {
+			if (iscleared(L, getwkey(node))) {
+				hascleared = 1;
+				// has white-white entry,it should be put into ephemeron list
+				if (valiswhite(getval(node))) {
+					hasww = 1;
+				}
+			}
+			else {
+				if (valiswhite(getval(node))) {
+					markvalue(L, getval(node));
+					marked = 1;
+				}
+			}
+		}
+	}
+
+	if (G(L)->gcstate == GCSpropagate) {
+		linkgclist(t, G(L)->grayagain);
+	}
+	else if (hasww) {
+		linkgclist(t, G(L)->ephemeron);
+	}
+	else if (hascleared) {
+		linkgclist(t, G(L)->allweak);
+	}
+
+	return marked;
+}
+
+static void traverse_weakvalue(struct lua_State* L, struct Table* t) {
+	// it is not worth to traverse array now
+	int hascleared = t->arraysize > 0;
+	Node* lastnode = getnode(t, twoto(t->lsizenode) - 1);
+	Node* node = getnode(t, 0);
+	for (; t->node && (node <= lastnode); node++) {
+		TValue* k = getwkey(node);
+		if (ttisnil(getval(node))) {
+			k->tt_ = LUA_TDEADKEY;
+		}
+		else {
+			markvalue(L, k);
+			if (iscleared(L, getval(node))) {
+				hascleared = 1;
+			}
+		}
+	}
+
+	if (G(L)->gcstate == GCSpropagate) {
+		linkgclist(t, G(L)->grayagain);
+	}
+	else if (hascleared) {
+		linkgclist(t, G(L)->weak);
+	}
 }
 
 static lu_mem traverse_strong_table(struct lua_State* L, struct Table* t) {
@@ -152,6 +241,36 @@ static lu_mem traverse_strong_table(struct lua_State* L, struct Table* t) {
     }
 
     return sizeof(struct Table) + sizeof(TValue) * t->arraysize + sizeof(Node) * twoto(t->lsizenode);
+}
+
+static lu_mem traverse_table(struct lua_State* L, struct Table* t) {
+	TValue o;
+	o.tt_ = LUA_TTABLE;
+	o.value_.gc = obj2gco(t);
+	TValue* mode = luaT_gettmbyobj(L, &o, TM_MODE);
+
+	char* weakkey = NULL;
+	char* weakvalue = NULL;
+	if (mode) {
+		weakkey = strchr(tsvalue(mode)->data, 'k');
+		weakvalue = strchr(tsvalue(mode)->data, 'v');
+	}
+
+	if (mode && (weakkey || weakvalue)) {
+		if (!weakvalue) { // is weakkey ?
+			traverse_ephemeron(L, t);
+		}
+		else if (!weakkey) { // is weakvalue ?
+			traverse_weakvalue(L, t);
+		}
+		else {
+			linkgclist(t, G(L)->allweak);
+		}
+		return 0;
+	}
+	else {
+		return traverse_strong_table(L, t);
+	}
 }
 
 static lu_mem traverse_proto(struct lua_State* L, struct Proto* p) {
@@ -227,7 +346,7 @@ static void propagatemark(struct lua_State* L) {
         case LUA_TTABLE:{
             struct Table* t = gco2tbl(gco);
             g->gray = t->gclist;
-            size = traverse_strong_table(L, t);
+            size = traverse_table(L, t);
         } break;
 		case LUA_TLCL:{
 			struct LClosure* cl = gco2lclosure(gco);
@@ -288,7 +407,7 @@ static void separate_tobefnz(struct lua_State* L) {
 	G(L)->finobjs = finobj;
 }
 
-static void propagate_tobefnz(struct lua_State* L) {
+static void propagate_mark_tobefnz(struct lua_State* L) {
 	for (struct GCObject* gco = G(L)->tobefnz; gco != NULL; gco = gco->next) {
 		markobject(L, gco);
 	}
@@ -345,6 +464,66 @@ static int runafewfinalizers(struct lua_State* L) {
 	return i;
 }
 
+static void clearkeys(struct lua_State* L, struct Table* current, struct Table* finalobj) {
+	for (; current != finalobj; current = gco2tbl(current->gclist)) {
+		struct Table* t = current;
+		Node* lastnode = getnode(t, twoto(t->lsizenode) - 1);
+		Node* node = getnode(t, 0);
+		for (; t->node && (node <= lastnode); node++) {
+			TValue* k = getwkey(node);
+			if (iscleared(L, k)) {
+				setnilvalue(getval(node));
+				k->tt_ = LUA_TDEADKEY;
+			}
+		}
+	}
+}
+
+static void clearvalues(struct lua_State* L, struct Table* current, struct Table* finalobj) {
+	for (; current != finalobj; current = gco2tbl(current->gclist)) {
+		struct Table* t = current;
+		for (unsigned int i = 0; i < t->arraysize; i++) {
+			TValue* v = &t->array[i];
+			if (!ttisnil(v) && iscleared(L, v)) {
+				setnilvalue(&t->array[i]);
+			}
+		}
+
+		Node* lastnode = getnode(t, twoto(t->lsizenode) - 1);
+		Node* node = getnode(t, 0);
+		for (; t->node && (node <= lastnode); node++) {
+			if (ttisnil(getval(node))) {
+				TValue* key = getwkey(node);
+				key->tt_ = LUA_TDEADKEY;
+			}
+			else if (iscleared(L, getval(node))) {
+				setnilvalue(getval(node));
+
+				TValue* key = getwkey(node);
+				key->tt_ = LUA_TDEADKEY;
+			}
+		}
+	}
+}
+
+static void converge_ephemeron(struct lua_State* L) {
+	int changed = 0;
+	do {
+		changed = 0;
+
+		struct GCObject* gco = G(L)->ephemeron;
+		struct Table* ephemeron = gco2tbl(gco);
+		G(L)->ephemeron = NULL;
+
+		for (; ephemeron != NULL; ephemeron = gco2tbl(ephemeron->gclist)) {
+			if (traverse_ephemeron(L, ephemeron)) {
+				propagateall(L);
+				changed = 1;
+			}
+		}
+	} while (changed);
+}
+
 static void atomic(struct lua_State* L) {
     struct global_State* g = G(L);
     g->gray = g->grayagain;
@@ -353,10 +532,28 @@ static void atomic(struct lua_State* L) {
     g->gcstate = GCSinsideatomic;
 	markmt(L);
     propagateall(L);
+
+	converge_ephemeron(L);
+
+	clearvalues(L, gco2tbl(G(L)->weak), NULL);
+	clearvalues(L, gco2tbl(G(L)->allweak), NULL);
+
+	struct GCObject* origin_weak = G(L)->weak;
+	struct GCObject* origin_allweak = G(L)->allweak;
+
 	separate_tobefnz(L);
 	g->gcfinnum = 1;
-	propagate_tobefnz(L);
+	propagate_mark_tobefnz(L);
 	propagateall(L);
+
+	converge_ephemeron(L);
+
+	clearkeys(L, gco2tbl(G(L)->ephemeron), NULL);
+	clearkeys(L, gco2tbl(G(L)->allweak), NULL);
+
+	clearvalues(L, gco2tbl(G(L)->weak), gco2tbl(origin_weak));
+	clearvalues(L, gco2tbl(G(L)->allweak), gco2tbl(origin_allweak));
+
     g->currentwhite = cast(lu_byte, otherwhite(g));
 
     luaS_clearcache(L);
@@ -375,6 +572,7 @@ static lu_mem freeobj(struct lua_State* L, struct GCObject* gco) {
             struct TString* ts = gco2ts(gco);
             lu_mem sz = sizelstring(ts->u.lnglen);
             luaM_free(L, ts, sz);
+			return sz;
         } break;
         case LUA_TTABLE: {
             struct Table* tbl = gco2tbl(gco);

@@ -90,6 +90,8 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 	 (o)->tt_ == LUA_TUSERDATA || \
 	 (o)->tt_ == LUA_TPROTO	)
 
+#define valiswhite(o) (iscollectable(o) && iswhite(gcvalue(o)))
+
 #define markobject(L, o) if (iswhite(o)) { reallymarkobject(L, obj2gco(o)); }
 #define markvalue(L, o)  if (iscollectable(o) && iswhite(gcvalue(o))) { reallymarkobject(L, gcvalue(o)); }
 #define linkgclist(gco, prev) { (gco)->gclist = prev; prev = obj2gco(gco); }
