@@ -160,7 +160,7 @@ static int traverse_ephemeron(struct lua_State* L, struct Table* t) {
 	Node* node = getnode(t, 0);
 	for (; t->node && (node <= lastnode); node++) {
 		if (ttisnil(getval(node))) {
-			TValue* key = getkey(node);
+			TValue* key = (TValue*)getkey(node);
 			key->tt_ = LUA_TDEADKEY;
 		}
 		else {
