@@ -538,7 +538,7 @@ void luaK_indexed(FuncState* fs, expdesc* e, expdesc* key) {
 }
 
 void luaK_nil(FuncState* fs, int from, int to) {
-	luaK_codeABC(fs, OP_LOADNIL, from, to, 0);
+	luaK_codeABC(fs, OP_LOADNIL, from, to - from, 0);
 }
 
 static void dischargejpc(FuncState* fs) {
@@ -646,7 +646,7 @@ static void discharge2reg(FuncState* fs, expdesc* e, int reg) {
 	luaK_dischargevars(fs, e);
 	switch (e->k) {
 	case VNIL: {
-		luaK_codeABC(fs, OP_LOADNIL, reg, reg, 0);
+		luaK_codeABC(fs, OP_LOADNIL, reg, 0, 0);
 	} break;
 	case VFLT: {
 		luaK_codeABx(fs, OP_LOADK, reg, luaK_floatK(fs, e->u.r));

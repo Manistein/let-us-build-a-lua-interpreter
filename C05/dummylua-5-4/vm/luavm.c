@@ -510,7 +510,7 @@ static void op_loadbool(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 static void op_loadnil(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	int a = GET_ARG_A(i);
 	int b = GET_ARG_B(i);
-	for (int i = a; i <= b; i++)
+	for (int i = a; i <= (a+b); i++)
 		setnilvalue(L->ci->l.base + i);
 }
 

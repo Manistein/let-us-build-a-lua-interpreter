@@ -75,20 +75,21 @@ for k, v in pairs(t3) do
     print(k, v)
 end 
 
--- local ephemeron_tbl = {__mode = "k"}
--- local t = setmetatable({}, ephemeron_tbl) 
--- e1 = {}
--- e2 = {}
+local ephemeron_tbl = {__mode = "k"}
+local t = setmetatable({}, ephemeron_tbl) 
+e1 = {}
+e2 = {}
  
--- t[e1] = e2
--- t[e2] = e1
+t[e1] = e2
+t[e2] = e1
 
--- e1 = nil
--- e2 = nil 
+e1 = nil
+e2 = nil 
 
--- collectgarbage()
+collectgarbage()
 
--- print("------------------")
--- for k, v in pairs(t) do 
---     print(k, v)
--- end
+print("------------------")
+for k, v in pairs(t) do 
+    print(k, v)
+end
+print("end")

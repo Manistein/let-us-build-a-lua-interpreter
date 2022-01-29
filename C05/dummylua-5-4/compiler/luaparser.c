@@ -1139,6 +1139,10 @@ static void statement(struct lua_State* L, LexState* ls, FuncState* fs) {
 		luaX_syntaxerror(L, ls, "unsupport syntax");
 		break;
 	}
+
+	lua_assert(ls->fs->f->maxstacksize >= ls->fs->freereg &&
+		ls->fs->freereg >= ls->fs->nactvars);
+	ls->fs->freereg = ls->fs->nactvars;  /* free registers */
 }
 
 static bool block_follow(struct lua_State* L, LexState* ls) {
