@@ -7,7 +7,7 @@
 #define PACKAGE_NAME "package"
 #define LUA_OEPN "luaopen_"
 
-static const CLIB = 0;
+static const int CLIB = 0;
 
 #ifdef _WINDOWS_PLATFORM_
 #include <windows.h>
@@ -70,26 +70,26 @@ static void setprodir(struct lua_State* L, const char* dft) {
 			LUA_CDIR "?.so;"
 #define LUA_DIR_SEP "/"
 
-static void lsys_unloadlib(void *lib) {
+static void lsys_unload(void *lib) {
 	dlclose(lib);
 }
 
 
 static void *lsys_load(lua_State *L, const char *path, int seeglb) {
-	void *lib = dlopen(path, RTLD_NOW | (seeglb ? RTLD_GLOBAL : RTLD_LOCAL));
+	void *lib = (void*)dlopen(path, RTLD_NOW | (seeglb ? RTLD_GLOBAL : RTLD_LOCAL));
 	if (lib == NULL) lua_pushstring(L, dlerror());
 	return lib;
 }
 
 
 static lua_CFunction lsys_sym(lua_State *L, void *lib, const char *sym) {
-	lua_CFunction f = cast_func(dlsym(lib, sym));
+	lua_CFunction f = (lua_CFunction)dlsym(lib, sym);
 	if (f == NULL) lua_pushstring(L, dlerror());
 	return f;
 }
 
-static void setprodir(struct lua_State* L, const char* default) {
-	lua_pushstring(L, default);
+static void setprodir(struct lua_State* L, const char* dft) {
+	lua_pushstring(L, dft);
 }
 
 #endif

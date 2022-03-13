@@ -34,7 +34,7 @@ local mod2 = require("scripts/p13_test_return_table")
 mod2.hello()
 mod2.world()
 
-package.cpath = package.cpath .. "../test/?.dll;"
+package.cpath = package.cpath .. "../test/?.so;"
 print(package.cpath)
 local clib = require("loadlib")
 clib.hello_world()

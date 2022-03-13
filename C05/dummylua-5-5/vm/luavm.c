@@ -723,7 +723,7 @@ static StkId vmdecode(struct lua_State* L, Instruction i) {
 	return ra;
 }
 
-void print_Instruction(int idx, Instruction i);
+static void print_Instruction(int idx, Instruction i);
 static bool vmexecute(struct lua_State* L, StkId ra, Instruction i) {
 	bool is_loop = true;
 	struct GCObject* gco = gcvalue(L->ci->func);

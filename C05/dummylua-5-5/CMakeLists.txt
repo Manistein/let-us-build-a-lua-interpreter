@@ -15,13 +15,6 @@ set(TEST_SRC test/p1_test.c test/p2_test.c test/p3_test.c test/p4_test.c test/p5
 set(SRC ${COMMON_SRC} ${CLIB_SRC} ${VM_SRC} ${TEST_SRC} ${COMPILER_SRC})
 set(MAIN_SRC main.c)
 
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${MAIN_SRC})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${COMMON_SRC})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${CLIB_SRC})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${VM_SRC})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${TEST_SRC})
-source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${COMPILER_SRC})
-
 # add the executable
 add_executable(dummylua main.c ${SRC})
 
@@ -30,9 +23,17 @@ add_executable(dummylua main.c ${SRC})
 
 IF(NOT WIN32)
 	target_link_libraries(dummylua m)
+    target_link_libraries(dummylua dl)
 ENDIF()
 
 IF (WIN32)
+    source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${MAIN_SRC})
+    source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${COMMON_SRC})
+    source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${CLIB_SRC})
+    source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${VM_SRC})
+    source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${TEST_SRC})
+    source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${COMPILER_SRC})
+
 	target_compile_definitions(dummylua PRIVATE _WINDOWS_PLATFORM_=1)
     target_compile_definitions(dummylua PRIVATE _CRT_SECURE_NO_WARNINGS=1)
 ENDIF()

@@ -17,7 +17,7 @@ static int hello_world_core(struct lua_State* L) {
 	return 0;
 }
 
-__declspec(dllexport) int luaopen_loadlib(struct lua_State* L) {
+LUA_API int luaopen_loadlib(struct lua_State* L) {
 	lua_createtable(L);
 	lua_pushcfunction(L, hello_world);
 	lua_setfield(L, -2, "hello_world");
@@ -25,7 +25,7 @@ __declspec(dllexport) int luaopen_loadlib(struct lua_State* L) {
 	return 1;
 }
 
-__declspec(dllexport) int luaopen_loadlib_core(struct lua_State* L) {
+LUA_API int luaopen_loadlib_core(struct lua_State* L) {
 	lua_createtable(L);
 	lua_pushcfunction(L, hello_world_core);
 	lua_setfield(L, -2, "hello_world_core");
