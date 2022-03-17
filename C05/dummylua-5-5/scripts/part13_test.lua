@@ -2,6 +2,12 @@
 print(package.path)
 print(package.cpath)
 
+-- test preload
+package.preload["test.aa.bb"] = function(file) print(file) end 
+require("test.aa.bb")
+local ret = require("test.aa.bb")
+print(ret)
+
 -- test package.loaded and package.searchers
 print("---------package.loaded---------")
 print(package.loaded)

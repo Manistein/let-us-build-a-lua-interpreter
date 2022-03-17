@@ -147,7 +147,7 @@ static void createclibs(struct lua_State* L) {
 static int searcher_preload(struct lua_State* L) {
 	TValue* o = index2addr(L, lua_upvalueindex(1));
 	struct Table* package = gco2tbl(gcvalue(o));
-	const TValue* loaded_obj = luaH_getshrstr(L, package, luaS_newliteral(L, "loaded"));
+	const TValue* loaded_obj = luaH_getshrstr(L, package, luaS_newliteral(L, "preload"));
 	lua_assert(!ttisnil(loaded_obj));
 
 	struct Table* loaded = gco2tbl(gcvalue(loaded_obj));
@@ -321,7 +321,7 @@ static void findloader(struct lua_State* L) {
 	struct Table* searchers_tbl = lua_totable(L, -1);
 
 	for (unsigned int i = 0; i < searchers_tbl->arraysize; i ++) {
-		TValue* v = &searchers_tbl->array[i];
+		TValue* v = (TValue*)luaH_getint(L, searchers_tbl, (lua_Integer)i);
 		if (ttisnil(v)) {
 			break;
 		}
@@ -330,7 +330,10 @@ static void findloader(struct lua_State* L) {
 			setobj(L->top, v);
 			increase_top(L);
 			lua_pushvalue(L, -4);
-			luaL_pcall(L, 1, 1);
+			int is_ok = luaL_pcall(L, 1, 1);
+			if (is_ok != LUA_OK) {
+				luaG_runerror(L, "%s", lua_tostring(L, -1));
+			}
 
 			if (!lua_isnil(L, -1)) {
 				return;
@@ -358,7 +361,8 @@ static int ll_require(struct lua_State* L) {
 
 	findloader(L);
 	if (lua_tofunction(L, -1)) {
-		luaL_pcall(L, 0, 1);
+		lua_pushstring(L, path);
+		luaL_pcall(L, 1, 1);
 
 		// if nothing to return,push true into top
 		if (lua_isnil(L, -1)) {
@@ -395,6 +399,9 @@ int luaB_openpackage(struct lua_State* L) {
 		lua_setfield(L, LUA_REGISTRYINDEX, LUA_LOADED); // set _LOADED to registry
 	}
 	lua_setfield(L, -2, "loaded"); // package.loaded = _LOADED
+
+	luaL_createtable(L); // create preload table
+	lua_setfield(L, -2, "preload");
 
 	// set lua path
 	setpath(L, "path", LUA_PATH_DEFAULT);
