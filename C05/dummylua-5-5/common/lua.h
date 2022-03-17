@@ -133,8 +133,10 @@ typedef int Instruction;
 #define MAX_LMEM  ((l_mem)(MAX_LUMEM >> 1))
 #define BUFSIZE 512
 
+#ifndef _WINDOWS_PLATFORM_
 #define min(a,b) (((a)<(b))?(a):(b))
 #define max(a,b) (((a)>(b))?(a):(b))
+#endif
 
 // IO
 #define lua_writestring(s) fwrite((s), sizeof(char), strlen((s)), stdout)
@@ -145,8 +147,9 @@ typedef int Instruction;
 #define LUA_API __declspec(dllexport)
 
 #else
-#endif
 
 #define LUA_API  __attribute__((visibility ("default")))
+
+#endif
 
 #endif
