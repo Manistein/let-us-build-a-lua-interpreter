@@ -24,11 +24,11 @@ end
 -- require a file that does not exist
 print("----require lua file")
 package.path = package.path .. "../?.lua;"
-local file_without_return = require("scripts/p13_require_test")
+local file_without_return = require("scripts.p13_require_test")
 print(file_without_return)
 
 -- require again
-file_without_return = require("scripts/p13_require_test")
+file_without_return = require("scripts.p13_require_test")
 print(file_without_return)
 
 -- require a module 
