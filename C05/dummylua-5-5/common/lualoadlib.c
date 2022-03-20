@@ -19,7 +19,7 @@ static const int CLIB = 0;
 			LUA_LDIR "?.lua;" LUA_LDIR "?\\init.lua;" \
 			".\\?.lua;.\\?\\init.lua;"
 #define LUA_CPATH_DEFAULT \
-			LUA_CDIR "?.dll;"
+			LUA_CDIR "?.dll;..\\3rd\\?.dll;"
 #define LUA_DIR_SEP "\\"
 
 static void pusherror(struct lua_State* L) {
@@ -67,7 +67,7 @@ static void setprodir(struct lua_State* L, const char* dft) {
 			LUA_LDIR "?.lua;" LUA_LDIR "/?/init.lua;" \
 			"./?.lua;./?/init.lua;"
 #define LUA_CPATH_DEFAULT \
-			LUA_CDIR "?.so;"
+			LUA_CDIR "?.so;../3rd/?.so;"
 #define LUA_DIR_SEP "/"
 
 static void lsys_unload(void *lib) {
