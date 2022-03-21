@@ -185,5 +185,6 @@ TValue* index2addr(struct lua_State* L, int idx);
 int lua_setmetatable(struct lua_State* L, int idx);
 struct Table* lua_getmetable(struct lua_State* L, int idx);
 Udata* lua_touserdata(struct lua_State* L, int idx);
+void* lua_tolightuserdata(struct lua_State* L, int idx);
 
 #endif 

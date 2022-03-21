@@ -499,6 +499,11 @@ Udata* lua_touserdata(struct lua_State* L, int idx) {
 	return gco2u(gcvalue(v));
 }
 
+void* lua_tolightuserdata(struct lua_State* L, int idx) {
+	TValue* v = index2addr(L, idx);
+	return v->value_.p;
+}
+
 lua_Integer lua_tointegerx(struct lua_State* L, int idx, int* isnum) {
     lua_Integer ret = 0;
     TValue* addr = index2addr(L, idx); 
