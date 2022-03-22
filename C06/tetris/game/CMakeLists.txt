@@ -34,3 +34,4 @@ target_include_directories(game PUBLIC
                           "${DUMMYLUA_DIR}/test"
                           "${SDL_DIR}/include"
                           )
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/bin)

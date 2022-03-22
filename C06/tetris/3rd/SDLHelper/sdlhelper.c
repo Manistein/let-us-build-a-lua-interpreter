@@ -89,7 +89,7 @@ LUA_API int luaopen_sdlhelper(struct lua_State* L) {
 	lua_setfield(L, -2, "delay");
 
 	lua_pushcfunction(L, destroy);
-	lua_setfield(L, -2, "destory");
+	lua_setfield(L, -2, "destroy");
 
 	lua_setfield(L, -2, "sdlhelper");
 
