@@ -65,8 +65,12 @@ static int delay(struct lua_State* L) {
 
 static int destroy(struct lua_State* L) {
 	SDL_Window* window = (SDL_Window*)lua_tolightuserdata(L, -1);
+	SDL_Surface* surface = SDL_GetWindowSurface(window);
+
+	SDL_FreeSurface(surface);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
+
 	return 0;
 }
 
