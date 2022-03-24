@@ -401,3 +401,19 @@ int luaL_loadfile(struct lua_State* L, const char* filename) {
 
 	return ok;
 }
+
+void luaL_setfuncs(struct lua_State* L, const lua_Reg* l, int nup) {
+	for (; (l->name != NULL) && (l->func != NULL); l++) {
+		if (nup > 0) {
+			for (int j = nup; j >= 1; j --) {
+				lua_pushvalue(L, -j);
+			}
+			lua_pushCclosure(L, l->func, nup);
+			lua_setfield(L, -2, l->name);
+		}
+		else {
+			lua_pushcfunction(L, l->func);
+			lua_setfield(L, -2, l->name);
+		}
+	}
+}

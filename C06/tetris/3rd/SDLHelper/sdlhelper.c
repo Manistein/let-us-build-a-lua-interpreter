@@ -74,26 +74,20 @@ static int destroy(struct lua_State* L) {
 	return 0;
 }
 
+static const lua_Reg sdlfuncs[] = {
+	{"create_window", create_window},
+	{"get_surface", get_surface},
+	{"fill_rect", fill_rect},
+	{"update_window_surface", update_window_surface},
+	{"delay", delay},
+	{"destroy", destroy},
+	{NULL, NULL}
+};
+
 LUA_API int luaopen_sdlhelper(struct lua_State* L) {
 	lua_createtable(L);
 	
-	lua_pushcfunction(L, create_window);
-	lua_setfield(L, -2, "create_window");
-
-	lua_pushcfunction(L, get_surface);
-	lua_setfield(L, -2, "get_surface");
-
-	lua_pushcfunction(L, fill_rect);
-	lua_setfield(L, -2, "fill_rect");
-
-	lua_pushcfunction(L, update_window_surface);
-	lua_setfield(L, -2, "update_window_surface");
-
-	lua_pushcfunction(L, delay);
-	lua_setfield(L, -2, "delay");
-
-	lua_pushcfunction(L, destroy);
-	lua_setfield(L, -2, "destroy");
+	luaL_setfuncs(L, sdlfuncs, 0);
 
 	lua_setfield(L, -2, "sdlhelper");
 

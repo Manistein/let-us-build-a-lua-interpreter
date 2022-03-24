@@ -88,4 +88,6 @@ int luaL_stacksize(struct lua_State* L);
 
 // load source and compile, if load success, then it returns 1, otherwise it returns 0 
 int luaL_loadfile(struct lua_State* L, const char* filename);
+void luaL_setfuncs(struct lua_State* L, const lua_Reg* l, int nup);
+
 #endif
