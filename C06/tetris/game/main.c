@@ -2,8 +2,10 @@
 #include "luaaux.h"
 #include "luastring.h"
 #include "SDL_events.h"
+#include "SDL_timer.h"
 
 bool g_Quit = false;
+const Uint32 frame_gap_by_millisecond = 33;
 
 #define check_error(L, code) { \
 	if (code != LUA_OK) { \
@@ -42,6 +44,7 @@ int main(int argc, char** argv) {
 	check_error(L, luaL_pcall(L, 0, 0));
 
 	SDL_Event e;
+	Uint32 last_time = SDL_GetTicks();
 	while (!g_Quit) {
 		if (SDL_PollEvent(&e) != 0) {
 			switch (e.type) {
@@ -54,6 +57,14 @@ int main(int argc, char** argv) {
 			default:
 				break;
 			}
+		}
+
+		Uint32 current_time = SDL_GetTicks();
+		if (current_time - last_time >= frame_gap_by_millisecond) {
+			lua_getglobal(L, "__loop__");
+			lua_pushinteger(L, (lua_Integer)(current_time - last_time));
+			check_error(L, luaL_pcall(L, 1, 0));
+			last_time = current_time;
 		}
 	}
 
