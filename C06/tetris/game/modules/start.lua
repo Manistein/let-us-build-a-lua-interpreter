@@ -2,38 +2,42 @@ print("hello world")
 package.path = package.path .. "../?.lua;"
 package.cpath = package.cpath .. "../../3rd/CLibs/?.dll;"
 
-local sdl_window = nil
-local sdl_surface = nil
-local sdlhelper = require("sdlhelper")
 local background = require("modules.layers.background")
+local window = nil
 
-local KEY_TYPE = {
-	ESC = 27,
-}
-
-function __init__()
-	local window = sdlhelper.create_window("test", 640, 480)
-	local surface = sdlhelper.get_surface(window)
-	sdlhelper.fill_rect(surface, 0x00, 0xff, 0xff)
-	sdlhelper.update_window_surface(window)
-
-	background.init(surface)
+function __init__(w)
+	print("call __init__ start")
+	window = w
+	background.init(w)
 	print("__init__")
 end
 
 function __loop__(delta)
+	print("call __loop__ start")
 	background.update(delta)
 end
 
-function __keypress__(type) 
-	print(type)
-	print(KEY_TYPE.ESC)
-	print("__keypress__")
+function __move_up__()
+	print("__move_up__")
+end
+
+function __move_down__()
+	print("__move_down__")
+end
+
+function __move_left__()
+	print("__move_left__")
+end
+
+function __move_right__()
+	print("__move_right__")
+end
+
+function __escape__()
+	print("__escape__")
 end
 
 function __destroy__()
 	background.destroy()
-
-	sdlhelper.destroy(window)
 	print("__destroy__")
 end
