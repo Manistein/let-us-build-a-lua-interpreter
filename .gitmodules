@@ -1,3 +1,0 @@
-[submodule "C06/tetris/3rd/SDL"]
-	path = C06/tetris/3rd/SDL
-	url = https://github.com/libsdl-org/SDL.git
