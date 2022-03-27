@@ -144,7 +144,7 @@ typedef int Instruction;
 
 #ifdef _WINDOWS_PLATFORM_
 
-#define LUA_API __declspec(dllexport)
+#define LUA_API extern "C" __declspec(dllexport)
 
 #else
 

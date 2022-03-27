@@ -296,9 +296,15 @@ int luaD_pcall(struct lua_State* L, Pfunc f, void* ud, ptrdiff_t oldtop, ptrdiff
     ptrdiff_t old_errorfunc = L->errorfunc;
     
     status = luaD_rawrunprotected(L, f, ud);
+
+	//ptrdiff_t df = 0;
+	//ptrdiff_t tf = 0;
     if (status != LUA_OK) {
         L->ci = old_ci;
         seterrobj(L, status, restorestack(L, oldtop));
+
+		//df = L->ci->func - L->stack;
+		//tf = L->top - L->stack;
     }
     
     L->errorfunc = old_errorfunc; 

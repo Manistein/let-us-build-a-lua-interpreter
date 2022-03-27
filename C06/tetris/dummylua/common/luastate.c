@@ -436,7 +436,9 @@ TValue* index2addr(struct lua_State* L, int idx) {
         }
     }
     else {
-        assert(L->top + idx > L->ci->func);
+		//ptrdiff_t df = L->ci->func - L->stack;
+		//ptrdiff_t tf = L->top - L->stack;
+  //      assert(L->top + idx > L->ci->func);
         return L->top + idx;
     }
 }

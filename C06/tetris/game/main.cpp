@@ -1,156 +1,155 @@
-extern "C" {
-#include "lua.h"
-#include "luaaux.h"
-#include "luastring.h"
-};
+// Direct2D.cpp : Defines the entry point for the application.
+//
 
-// Include GLEW
-#include <GL/glew.h>
-
-// Include GLFW
-#include <GLFW/glfw3.h>
-GLFWwindow* window;
-
-// Include GLM
-#include <glm/glm.hpp>
 #include <windows.h>
-using namespace glm;
+#include "logic.h"
 
-bool g_quit = false;
-int g_frame_gap = 33;
+#define MAX_LOADSTRING 100
 
-jmp_buf g_jmp_b;
+// Global Variables:
+HINSTANCE hInst;                                // current instance
+WCHAR* szTitle = L"";                  // The title bar text
+WCHAR* szWindowClass = L"Tetris";            // the main window class name
+HWND g_hWnd = NULL;
 
-static void check_error(struct lua_State* L, int code) {
-	if (code != LUA_OK) {
-		if (luaL_tostring(L, -1)) {
-			printf("%s", luaL_tostring(L, -1));
-		}
+const int iFrameGapByMillisecond = 33;
 
-		longjmp(g_jmp_b, 1);
-	}
-}
+// Forward declarations of functions included in this code module:
+ATOM                MyRegisterClass(HINSTANCE hInstance);
+BOOL                InitInstance(HINSTANCE, int);
+LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
+INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
-static bool gl_init() {
-	// Initialise GLFW
-	if (!glfwInit())
+BOOL g_Quit = FALSE;
+
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+	_In_opt_ HINSTANCE hPrevInstance,
+	_In_ LPWSTR    lpCmdLine,
+	_In_ int       nCmdShow)
+{
+	UNREFERENCED_PARAMETER(hPrevInstance);
+	UNREFERENCED_PARAMETER(lpCmdLine);
+
+	// TODO: Place code here.
+	MyRegisterClass(hInstance);
+
+	// Perform application initialization:
+	if (!InitInstance(hInstance, nCmdShow))
 	{
-		fprintf(stderr, "Failed to initialize GLFW\n");
-		getchar();
-		return false;
+		DWORD err = GetLastError();
+		return FALSE;
 	}
 
-	glfwWindowHint(GLFW_SAMPLES, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // To make MacOS happy; should not be needed
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
-	return true;
-}
-
-static GLFWwindow* create_window(float width, float height, const char* title) {
-	// Open a window and create its OpenGL context
-	GLFWwindow* window = glfwCreateWindow(width, height, title, NULL, NULL);
-	if (window == NULL) {
-		fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n");
-		getchar();
-		glfwTerminate();
-		return NULL;
-	}
-	glfwMakeContextCurrent(window);
-
-	// Initialize GLEW
-	if (glewInit() != GLEW_OK) {
-		fprintf(stderr, "Failed to initialize GLEW\n");
-		getchar();
-		glfwTerminate();
-		return NULL;
+	int ret = logic_init((void*)g_hWnd);
+	if (!ret)
+	{
+		return FALSE;
 	}
 
-	// Ensure we can capture the escape key being pressed below
-	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-
-	// Dark blue background
-	glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
-
-	return window;
-}
-
-static int check_key_release(struct lua_State* L, GLFWwindow* window) {
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
-		g_quit = true;
-		lua_getglobal(L, "__escape__");
-		return luaL_pcall(L, 0, 0);
-	}
-	else if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
-		lua_getglobal(L, "__move_up__");
-		return luaL_pcall(L, 0, 0);
-	}
-	else if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-		lua_getglobal(L, "__move_down__");
-		return luaL_pcall(L, 0, 0);
-	}
-	else if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
-		lua_getglobal(L, "__move_left__");
-		return luaL_pcall(L, 0, 0);
-	}
-	else if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
-		lua_getglobal(L, "__move_right__");
-		return luaL_pcall(L, 0, 0);
-	}
-
-	return LUA_OK;
-}
-
-int main(int argc, char** argv) {
-	struct lua_State* L = luaL_newstate();
-	luaL_openlibs(L);
-	
-	if (setjmp(g_jmp_b) == 0) {
-		check_error(L, luaL_loadfile(L, "../modules/start.lua"));
-		check_error(L, luaL_pcall(L, 0, 0));
-
-		gl_init();
-		GLFWwindow* window = create_window(1024.0f, 768.0f, "Tetris");
-
-		// init game
-		lua_getglobal(L, "__init__");
-		lua_pushlightuserdata(L, (void*)window);
-		check_error(L, luaL_pcall(L, 1, 0));
-
-		int last_millisecond = (int)GetTickCount();
-		while (!g_quit) {
-
-			// Clear the screen. 
-			glClear(GL_COLOR_BUFFER_BIT);
-
-			check_error(L, check_key_release(L, window));
-
-			int current_millisecond = (int)GetTickCount();
-			if (current_millisecond - last_millisecond > g_frame_gap) {
-				lua_getglobal(L, "__loop__");
-				lua_pushinteger(L, current_millisecond - last_millisecond);
-				check_error(L, luaL_pcall(L, 1, 0));
-
-				last_millisecond = current_millisecond;
-			}
-
-			// Swap buffers
-			glfwSwapBuffers(window);
-			glfwPollEvents();
+	MSG msg;
+	// Main message loop:
+	int last_millisecond = (int)GetTickCount();
+	while (!g_Quit)
+	{
+		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
 		}
 
-		lua_getglobal(L, "__destroy__");
-		check_error(L, luaL_pcall(L, 0, 0));
+		int current_millisecond = (int)GetTickCount();
+		if (current_millisecond - last_millisecond > iFrameGapByMillisecond)
+		{
+			logic_frame(current_millisecond - last_millisecond);
+			last_millisecond = current_millisecond;
+		}
+	}
+	
+	logic_destroy();
+	return (int)msg.wParam;
+}
+
+//
+//  FUNCTION: MyRegisterClass()
+//
+//  PURPOSE: Registers the window class.
+//
+ATOM MyRegisterClass(HINSTANCE hInstance)
+{
+	WNDCLASSEXW wcex;
+
+	wcex.cbSize = sizeof(WNDCLASSEX);
+
+	wcex.style = CS_HREDRAW | CS_VREDRAW;
+	wcex.lpfnWndProc = WndProc;
+	wcex.cbClsExtra = 0;
+	wcex.cbWndExtra = 0;
+	wcex.hInstance = hInstance;
+	wcex.hIcon = (HICON)LoadIcon(hInstance, MAKEINTRESOURCE(IDI_WINLOGO));
+	wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+	wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+	wcex.lpszMenuName = NULL;
+	wcex.lpszClassName = szWindowClass;
+	wcex.hIconSm = (HICON)LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_WINLOGO));
+
+	return RegisterClassExW(&wcex);
+}
+
+//
+//   FUNCTION: InitInstance(HINSTANCE, int)
+//
+//   PURPOSE: Saves instance handle and creates main window
+//
+//   COMMENTS:
+//
+//        In this function, we save the instance handle in a global variable and
+//        create and display the main program window.
+//
+BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+{
+	hInst = hInstance; // Store instance handle in our global variable
+
+	HWND hwnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW^WS_THICKFRAME^WS_MAXIMIZEBOX,
+		0, 0, 800, 600, nullptr, nullptr, hInstance, nullptr);
+
+	if (!hwnd)
+	{
+		return FALSE;
 	}
 
-	luaL_close(L);
-	glfwTerminate();
+	ShowWindow(hwnd, nCmdShow);
+	UpdateWindow(hwnd);
 
-#ifdef _WINDOWS_PLATFORM_
-	system("pause");
-#endif
+	g_hWnd = hwnd;
+	return TRUE;
+}
 
+//
+//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
+//
+//  PURPOSE: Processes messages for the main window.
+//
+//  WM_COMMAND  - process the application menu
+//  WM_PAINT    - Paint the main window
+//  WM_DESTROY  - post a quit message and return
+//
+//
+LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch (message)
+	{
+	case WM_PAINT:
+	{
+	}
+	break;
+	case WM_DESTROY:
+	{
+		g_Quit = true;
+		PostQuitMessage(0);
+	}
+	break;
+	default:
+		return DefWindowProc(hWnd, message, wParam, lParam);
+	}
 	return 0;
 }
