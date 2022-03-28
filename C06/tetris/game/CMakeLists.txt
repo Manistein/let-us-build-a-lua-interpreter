@@ -11,6 +11,11 @@ IF (WIN32)
 
   target_compile_definitions(${PROJECT_NAME} PRIVATE _WINDOWS_PLATFORM_=1)
   target_compile_definitions(${PROJECT_NAME} PRIVATE _CRT_SECURE_NO_WARNINGS=1)
+
+  add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${CMAKE_CURRENT_SOURCE_DIR}/../3rd/clibs/d2d1.dll
+    $<TARGET_FILE_DIR:${PROJECT_NAME}>)
 ELSE()
   target_link_libraries(${PROJECT_NAME} m)
   target_link_libraries(${PROJECT_NAME} dl)
