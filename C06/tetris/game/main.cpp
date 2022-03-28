@@ -60,7 +60,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		int current_millisecond = (int)GetTickCount();
 		if (current_millisecond - last_millisecond > iFrameGapByMillisecond)
 		{
-			logic_frame(current_millisecond - last_millisecond);
+			if (!logic_frame(current_millisecond - last_millisecond)) 
+			{
+				g_Quit = TRUE;
+				break;
+			}
 			last_millisecond = current_millisecond;
 		}
 	}

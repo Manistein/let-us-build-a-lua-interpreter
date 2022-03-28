@@ -6,11 +6,12 @@ extern "C" {
 
 #include "logic.h"
 static lua_State* L = NULL;
-static FILE* g_file = NULL;
 
 static void log_file(const char* text) {
-	fprintf(g_file, "%s", text);
-	fflush(g_file);
+	FILE* handle = fopen("./error.txt", "ab+");
+	fprintf(handle, "%s", text);
+	fflush(handle);
+	fclose(handle);
 }
 
 #define check(p) { \
@@ -23,8 +24,6 @@ static void log_file(const char* text) {
 }
 
 int logic_init(void* hwnd) {
-	g_file = fopen("./error.txt", "ab+");
-
 	L = luaL_newstate();
 	luaL_openlibs(L);
 
@@ -44,11 +43,6 @@ void logic_destroy() {
 
 	lua_close(L);
 	L = NULL;
-
-	if (g_file) {
-		fclose(g_file);
-		g_file = NULL;
-	}
 }
 
 int logic_frame(int delta) {
