@@ -1,43 +1,44 @@
 package.path = package.path .. "../?.lua;"
 package.cpath = package.cpath .. "../../3rd/clibs/?.dll;"
 
-local d2d = require("d2d")
+local render = require("modules.core.render")
+render.init()
 
-local background = require("modules.layers.background")
+local controller = require("modules.controller")
+
+local test_c1 = nil
+local test_c2 = nil
 
 function __init__(w)
-	d2d.init(w)
-	d2d.error("call __init__ start")
-	background.init()
-	d2d.error("__init__")
+	test_c1 = controller:new()
+	test_c2 = controller:new()
+
+	test_c1:test_inc()
+
+	local txt_t1 = tostring(test_c1.value)
+	render.log("test_c1 value " .. txt_t1)
+
+	local txt_t2 = tostring(test_c2.value)
+	render.log("test_c2 value " .. txt_t2)
 end
 
 function __loop__(delta)
-	background.update(delta)
 end
 
 function __move_up__()
-	d2d.error("__move_up__")
 end
 
 function __move_down__()
-	d2d.error("__move_down__")
 end
 
 function __move_left__()
-	d2d.error("__move_left__")
 end
 
 function __move_right__()
-	d2d.error("__move_right__")
 end
 
 function __escape__()
-	d2d.error("__escape__")
 end
 
 function __destroy__()
-	background.destroy()
-	d2d.error("__destroy__")
-	d2d.destroy()
 end

@@ -362,7 +362,10 @@ static int ll_require(struct lua_State* L) {
 	findloader(L);
 	if (lua_tofunction(L, -1)) {
 		lua_pushstring(L, path);
-		luaL_pcall(L, 1, 1);
+		int ret = luaL_pcall(L, 1, 1);
+		if (ret != LUA_OK) {
+			luaG_runerror(L, "%s", lua_tostring(L, -1));
+		}
 
 		// if nothing to return,push true into top
 		if (lua_isnil(L, -1)) {

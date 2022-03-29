@@ -723,13 +723,20 @@ static StkId vmdecode(struct lua_State* L, Instruction i) {
 	return ra;
 }
 
-static void print_Instruction(int idx, Instruction i);
+static void print_Instruction(FILE* handle, int idx, Instruction i);
+static void print_exe_Instruction(int idx, Instruction i) {
+	FILE* handle = fopen("./running_instructions.txt", "ab+");
+	print_Instruction(handle, idx, i);
+	fflush(handle);
+	fclose(handle);
+}
+
 static bool vmexecute(struct lua_State* L, StkId ra, Instruction i) {
 	bool is_loop = true;
 	struct GCObject* gco = gcvalue(L->ci->func);
 	LClosure* cl = gco2lclosure(gco);
 
-	// print_Instruction(0, i);
+	// print_exe_Instruction(0, i);
 
 	switch (GET_OPCODE(i)) {
 	case OP_MOVE: {
@@ -868,21 +875,21 @@ static bool vmexecute(struct lua_State* L, StkId ra, Instruction i) {
 	return is_loop;
 }
 
-static void print_TValue(const TValue* v) {
+static void print_TValue(const TValue* v, FILE* handle) {
 	switch (v->tt_)
 	{
 	case LUA_NUMINT: {
-		printf("%lld ", v->value_.i);
+		fprintf(handle, "%lld ", v->value_.i);
 	} break;
 	case LUA_NUMFLT: {
-		printf("%.14g ", v->value_.n);
+		fprintf(handle, "%.14g ", v->value_.n);
 	} break;
 	case LUA_SHRSTR: case LUA_LNGSTR: {
 		TString* ts = gco2ts(gcvalue(v));
-		printf("%s ", getstr(ts));
+		fprintf(handle, "%s ", getstr(ts));
 	} break;
 	case LUA_TBOOLEAN: {
-		printf("%s ", v->value_.b ? "true" : "false");
+		fprintf(handle, "%s ", v->value_.b ? "true" : "false");
 	} break;
 	default:
 		break;
@@ -935,43 +942,48 @@ static char* code2name[] = {
 	"OP_CLOSURE"
 };
 
-static void print_Instruction(int idx, Instruction i) {
+static void print_Instruction(FILE* handle, int idx, Instruction i) {
 	switch (luaP_opmodes[GET_OPCODE(i)] & 0x03) {
 	case iABC: {
-		printf("[%d] opcode(%s) ra(%d) rb(%d) rc(%d) \n", idx, code2name[GET_OPCODE(i)], GET_ARG_A(i), GET_ARG_B(i), GET_ARG_C(i));
+		fprintf(handle, "[%d] opcode(%s) ra(%d) rb(%d) rc(%d) \n", idx, code2name[GET_OPCODE(i)], GET_ARG_A(i), GET_ARG_B(i), GET_ARG_C(i));
 	} break;
 	case iABx: {
-		printf("[%d] opcode(%s) ra(%d) bx(%d) \n", idx, code2name[GET_OPCODE(i)], GET_ARG_A(i), GET_ARG_Bx(i));
+		fprintf(handle, "[%d] opcode(%s) ra(%d) bx(%d) \n", idx, code2name[GET_OPCODE(i)], GET_ARG_A(i), GET_ARG_Bx(i));
 	} break;
 	case iAsBx: {
-		printf("[%d] opcode(%s) ra(%d) sbx(%d) \n", idx, code2name[GET_OPCODE(i)], GET_ARG_A(i), GET_ARG_sBx(i));
+		fprintf(handle, "[%d] opcode(%s) ra(%d) sbx(%d) \n", idx, code2name[GET_OPCODE(i)], GET_ARG_A(i), GET_ARG_sBx(i));
 	} break;
 	default: break;
 	}
 }
 
 static void debug_print(struct lua_State* L) {
+	FILE* handle = fopen("./instructions.txt", "ab+");
+	fprintf(handle, "%s", "-------------------------");
+	fprintf(handle, "%s", "k=>");
+
 	// print table k
 	struct GCObject* gco = gcvalue(L->ci->func);
 	LClosure* cl = gco2lclosure(gco);
-	printf("k=>");
 	for (int i = 0; i < cl->p->sizek; i++) {
-		printf("[%d]:", i);
-		print_TValue(&cl->p->k[i]);
+		fprintf(handle, "%d", i);
+		print_TValue(&cl->p->k[i], handle);
 	}
-	printf("\n");
+	fprintf(handle, "\n");
 
 	for (int i = 0; i < cl->p->sizecode; i++) {
-		print_Instruction(i, cl->p->code[i]);
+		print_Instruction(handle, i, cl->p->code[i]);
 		if (GET_OPCODE(cl->p->code[i]) == OP_RETURN) {
 			break;
 		}
 	}
-	printf("\n");
+
+	fflush(handle);
+	fclose(handle);
 }
 
 static void newframe(struct lua_State* L) {
-	// debug_print(L);
+	//debug_print(L);
 
 	int count = 0;
 	bool is_loop = true;
