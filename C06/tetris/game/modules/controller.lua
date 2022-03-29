@@ -28,10 +28,4 @@ function  controller:test_inc()
 	self.value = self.value + 1
 end
 
-function controller.__concat(l, r)
-	local rstr = tostring(r)
-	local ret = l .. r 
-	return ret
-end
-
 return controller

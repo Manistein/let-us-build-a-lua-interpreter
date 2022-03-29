@@ -469,8 +469,8 @@ static void funcargs(FuncState* fs, expdesc* e) {
 	lua_assert(e->k == VNONRELOC);
 	int base = e->u.info;
 	int nparams = fs->freereg - (base + 1);
-	init_exp(e, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams + 1, 0));
-	fs->freereg = base;
+	init_exp(e, VCALL, luaK_codeABC(fs, OP_CALL, base, nparams + 1, 2));
+	fs->freereg = base + 1;
 
 	checknext(fs->ls->L, fs->ls, ')');
 }

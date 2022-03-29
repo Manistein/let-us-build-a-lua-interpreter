@@ -6,20 +6,11 @@ render.init()
 
 local controller = require("modules.controller")
 
-local test_c1 = nil
-local test_c2 = nil
-
 function __init__(w)
-	test_c1 = controller:new()
-	test_c2 = controller:new()
-
-	test_c1:test_inc()
-
-	local txt_t1 = tostring(test_c1.value)
-	render.log("test_c1 value " .. txt_t1)
-
-	local txt_t2 = tostring(test_c2.value)
-	render.log("test_c2 value " .. txt_t2)
+	render.log("xxxxyyyyy")
+	local a1, a2 = tostring(10)
+	render.log(a1)
+	render.log(a2)
 end
 
 function __loop__(delta)
