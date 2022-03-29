@@ -1053,6 +1053,8 @@ static void exprstat(struct lua_State* L, LexState* ls, FuncState* fs) {
 	}
 	else {
 		check_condition(ls, lh.v.k == VCALL, "exp type error");
+		expdesc* e = &lh.v;
+		SET_ARG_C(get_instruction(fs, e), 1);
 	}
 }
 
