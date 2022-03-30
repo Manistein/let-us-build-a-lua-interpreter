@@ -142,14 +142,42 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch (message)
 	{
-	case WM_PAINT:
-	{
-	}
-	break;
 	case WM_DESTROY:
 	{
 		g_Quit = true;
 		PostQuitMessage(0);
+	}
+	break;
+	case WM_KEYDOWN:
+	{
+		if (GetKeyState('W') & 0x8000)
+		{
+			logic_key_w_press();
+		}
+		else if (GetKeyState('S') & 0x8000)
+		{
+			logic_key_s_press();
+		}
+		else if (GetKeyState('A') & 0x8000)
+		{
+			logic_key_a_press();
+		}
+		else if (GetKeyState('D') & 0x8000)
+		{
+			logic_key_d_press();
+		}
+		else if (GetKeyState(VK_SPACE) & 0x8000)
+		{
+			logic_key_space_press();
+		}
+		else if (GetKeyState(VK_RETURN) & 0x8000)
+		{
+			logic_key_enter_press();
+		}
+		else if (GetKeyState(VK_ESCAPE) & 0x8000)
+		{
+			logic_key_esc_press();
+		}
 	}
 	break;
 	default:
