@@ -2,8 +2,8 @@ local d2d = require("d2d")
 
 local render = {}
 
-function render.init()
-	d2d.init()
+function render.init(w)
+	d2d.init(w)
 end
 
 function render.destroy()

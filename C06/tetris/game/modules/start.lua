@@ -1,13 +1,14 @@
 package.path = package.path .. "../?.lua;"
 package.cpath = package.cpath .. "../../3rd/clibs/?.dll;"
 
+local const = require("modules.const")
 local render = require("modules.core.render")
-render.init()
 
 local ctrl_class = require("modules.controller")
 local controller = nil 
 
 function __init__(w)
+	render.init(w)
 	controller = ctrl_class:new()
 	render.log("-------------" .. tostring(controller.uimgr))
 	__reset__()
@@ -28,6 +29,7 @@ function __loop__(delta)
 end
 
 function __move_up__()
+	controller:key_event(const.KEY_EVENT.MOVE_UP)
 	render.log("start|move up")
 end
 
