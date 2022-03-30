@@ -553,7 +553,7 @@ static void adjust_assign(FuncState* fs, int nvars, int nexps, expdesc* e) {
 		extra++;
 		if (extra < 0) extra = 0;
 		luaK_setreturns(fs, e, extra);
-		if (extra >= 1) luaK_reserveregs(fs, extra);
+		if (extra > 1) luaK_reserveregs(fs, extra - 1);
 	}
 	else {
 		if (e->k != VVOID) luaK_exp2nextreg(fs, e);

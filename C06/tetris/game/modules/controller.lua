@@ -1,15 +1,16 @@
 local render = require("modules.core.render")
-local object = require("modules.core.object")
+local uimgrclass  = require("modules.ui.mgr")
 
+local object = require("modules.core.object")
 local controller = object:inherit()
 
 function controller:init()
-	self.value = 1
-	local vstr = tostring(self.value)
-	render.log("controller object init" .. vstr)
+	self.uimgr = uimgrclass:new()
+	render.log("controller object init success")
 end 
 
 function controller:reset()
+	self.uimgr:reset()
 	render.log("controller object reset")
 end
 
@@ -18,14 +19,12 @@ function controller:exit()
 end
 
 function controller:update(delta)
+	render.begin_draw()
+	self.uimgr:draw()
+	render.end_draw()
 end
 
-function controller:keypress(k)
-	render.log("keypress " .. k)
-end
-
-function  controller:test_inc()
-	self.value = self.value + 1
+function controller:key_event(event)
 end
 
 return controller

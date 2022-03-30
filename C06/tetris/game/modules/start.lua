@@ -4,14 +4,18 @@ package.cpath = package.cpath .. "../../3rd/clibs/?.dll;"
 local render = require("modules.core.render")
 render.init()
 
-local controller = require("modules.controller")
+local ctrl_class = require("modules.controller")
+local controller = nil 
 
 function __init__(w)
+	controller = ctrl_class:new()
+	render.log("-------------" .. tostring(controller.uimgr))
 	__reset__()
 	render.log("start|init|success")
 end
 
 function __reset__()
+	controller:reset()
 	render.log("start|reset|success")
 end
 
@@ -20,6 +24,7 @@ function __exit__()
 end
 
 function __loop__(delta)
+	controller:update(delta)
 end
 
 function __move_up__()
