@@ -271,8 +271,7 @@ void luaK_posfix(FuncState* fs, int op, expdesc* e1, expdesc* e2) {
 		}
 		else {
 			e2->k = VNONRELOC;
-			e2->u.info = fs->freereg;
-			luaK_reserveregs(fs, 1);
+			e2->u.info = GET_ARG_A(get_instruction(fs, e2));
 		}
 
 		fs->freereg -= 2;

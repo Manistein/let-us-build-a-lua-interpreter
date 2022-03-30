@@ -440,6 +440,7 @@ static void op_concat(struct lua_State* L, LClosure* cl, StkId ra, Instruction i
 	StkId base = L->ci->l.base;
 	StkId arg_b = base + b;
 	StkId arg_c = base + c;
+
 	if (!luaO_concat(L, arg_b, arg_c, ra)) {
 		luaT_trycallbinTM(L, arg_b, arg_c, TM_CONCAT);
 		setobj(ra, L->top - 1);
@@ -983,7 +984,7 @@ static void debug_print(struct lua_State* L) {
 }
 
 static void newframe(struct lua_State* L) {
-	//debug_print(L);
+	// debug_print(L);
 
 	int count = 0;
 	bool is_loop = true;
