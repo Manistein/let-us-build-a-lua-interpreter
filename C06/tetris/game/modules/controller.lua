@@ -5,6 +5,7 @@ local object = require("modules.core.object")
 local controller = object:inherit()
 
 function controller:init()
+	render.log(tostring(1) .. tostring(2))
 	self.uimgr = uimgrclass:new()
 	render.log("controller object init success")
 end 

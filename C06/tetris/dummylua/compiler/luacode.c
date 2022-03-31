@@ -196,14 +196,7 @@ void luaK_infix(FuncState* fs, int op, expdesc* e) {
 		luaK_goiffalse(fs, e);
 	} break;
 	case BINOPR_CONCAT: {
-		if (e->k != VCALL) {
-			luaK_exp2nextreg(fs, e);
-		}
-		else {
-			e->k = VNONRELOC;
-			e->u.info = fs->freereg;
-			luaK_reserveregs(fs, 1);
-		}
+		luaK_exp2nextreg(fs, e);
 	} break;
 	case BINOPR_ADD: case BINOPR_SUB: case BINOPR_MUL: case BINOPR_DIV:
 	case BINOPR_IDIV: case BINOPR_MOD: case BINOPR_POW: case BINOPR_BAND:
