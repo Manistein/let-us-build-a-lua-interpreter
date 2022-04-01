@@ -1,7 +1,7 @@
 #ifndef _logic_h_
 #define _logic_h_
 
-int logic_init(void* hwnd);
+int logic_init(void* hwnd, int width, int height);
 void logic_destroy();
 
 int logic_frame(int delta);

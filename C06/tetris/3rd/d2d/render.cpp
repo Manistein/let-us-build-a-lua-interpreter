@@ -48,7 +48,7 @@ int render_init(HWND hwnd) {
 	}
 
 	hr = g_render_target->CreateSolidColorBrush(
-		D2D1::ColorF(D2D1::ColorF::Purple),
+		D2D1::ColorF(D2D1::ColorF::Orange),
 		&g_box_outlie_brush
 	);
 

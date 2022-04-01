@@ -1,12 +1,13 @@
 local render = require("modules.core.render")
 local uimgrclass  = require("modules.ui.mgr")
+local blockmgr_class = require("modules.logic.blockmgr")
 
 local object = require("modules.core.object")
 local controller = object:inherit()
 
 function controller:init()
-	render.log(tostring(1) .. tostring(2))
 	self.uimgr = uimgrclass:new()
+	self.blockmgr = blockmgr_class:new()
 	render.log("controller object init success")
 end 
 
@@ -22,6 +23,7 @@ end
 function controller:update(delta)
 	render.begin_draw()
 	self.uimgr:draw()
+	self.blockmgr:draw()
 	render.end_draw()
 end
 

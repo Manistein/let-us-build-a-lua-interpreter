@@ -17,4 +17,14 @@ const.KEY_EVENT = {
 	RESUME = 6,
 }
 
+const.BOX_SIZE = {
+	WIDTH = 38,
+	HEIGHT = 38,
+}
+
+const.BOARD_SIZE = {
+	X = 10,
+	Y = 20,
+}
+
 return const

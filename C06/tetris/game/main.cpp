@@ -11,6 +11,8 @@ HINSTANCE hInst;                                // current instance
 WCHAR* szTitle = L"";                  // The title bar text
 WCHAR* szWindowClass = L"Tetris";            // the main window class name
 HWND g_hWnd = NULL;
+int g_iScreenWidth = 1024;
+int g_iScreenHeight = 768;
 
 const int iFrameGapByMillisecond = 33;
 
@@ -40,7 +42,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 		return FALSE;
 	}
 
-	int ret = logic_init((void*)g_hWnd);
+	int ret = logic_init((void*)g_hWnd, g_iScreenWidth, g_iScreenHeight);
 	if (!ret)
 	{
 		return FALSE;
@@ -114,7 +116,7 @@ BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
 	hInst = hInstance; // Store instance handle in our global variable
 
 	HWND hwnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW^WS_THICKFRAME^WS_MAXIMIZEBOX,
-		0, 0, 800, 600, nullptr, nullptr, hInstance, nullptr);
+		0, 0, g_iScreenWidth, g_iScreenHeight, nullptr, nullptr, hInstance, nullptr);
 
 	if (!hwnd)
 	{

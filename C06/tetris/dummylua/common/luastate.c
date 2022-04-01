@@ -513,6 +513,9 @@ lua_Integer lua_tointegerx(struct lua_State* L, int idx, int* isnum) {
         ret = addr->value_.i;
         *isnum = 1;
     }
+	else if (addr->tt_ == LUA_NUMFLT) {
+		ret = (lua_Integer)addr->value_.n;
+	}
     else {
         *isnum = 0;
     }

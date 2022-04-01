@@ -23,7 +23,7 @@ static void log_file(const char* text) {
 	} \
 }
 
-int logic_init(void* hwnd) {
+int logic_init(void* hwnd, int width, int height) {
 	L = luaL_newstate();
 	luaL_openlibs(L);
 
@@ -32,7 +32,9 @@ int logic_init(void* hwnd) {
 
 	lua_getglobal(L, "__init__");
 	lua_pushlightuserdata(L, hwnd);
-	check(luaL_pcall(L, 1, 0));
+	lua_pushinteger(L, width);
+	lua_pushinteger(L, height);
+	check(luaL_pcall(L, 3, 0));
 
 	return 1;
 }

@@ -7,10 +7,16 @@ local render = require("modules.core.render")
 local ctrl_class = require("modules.controller")
 local controller = nil 
 
-function __init__(w)
-	render.init(w)
+GLOBAL_VAR = {}
+
+function __init__(hwnd, width, height)
+	render.init(hwnd)
+	render.log("__init__ " .. tostring(width) .. " " .. tostring(height))
+
+	GLOBAL_VAR.SCREEN_WIDTH = width
+	GLOBAL_VAR.SCREEN_HEIGHT = height
+
 	controller = ctrl_class:new()
-	render.log("-------------" .. tostring(controller.uimgr))
 	__reset__()
 	render.log("start|init|success")
 end
