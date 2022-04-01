@@ -11,10 +11,9 @@ function board:init()
 	self.x = (GLOBAL_VAR.SCREEN_WIDTH - self.width) / 2 
 	self.y = 0 
 
-	render.log(self.width)
-	render.log(self.height)
-	render.log(self.x)
-	render.log(self.y)
+	GLOBAL_VAR.BOARD_X = self.x 
+	GLOBAL_VAR.BOARD_Y = self.y
+
 	render.log("board|init|success")
 end
 

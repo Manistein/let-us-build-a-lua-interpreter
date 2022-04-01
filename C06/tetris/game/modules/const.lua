@@ -5,6 +5,7 @@ const.BLOCK_COLOR = {
 	YELLOW = 1,
 	BLUE = 2,
 	GREEN = 3,
+	MAX_COLOR = 4,
 }
 
 const.KEY_EVENT = {

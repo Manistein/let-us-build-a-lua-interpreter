@@ -10,6 +10,8 @@ local controller = nil
 GLOBAL_VAR = {}
 
 function __init__(hwnd, width, height)
+	srand()
+
 	render.init(hwnd)
 	render.log("__init__ " .. tostring(width) .. " " .. tostring(height))
 
@@ -40,14 +42,17 @@ function __move_up__()
 end
 
 function __move_down__()
+	controller:key_event(const.KEY_EVENT.MOVE_DOWN)
 	render.log("start|move down")
 end
 
 function __move_left__()
+	controller:key_event(const.KEY_EVENT.MOVE_LEFT)
 	render.log("start|move left")
 end
 
 function __move_right__()
+	controller:key_event(const.KEY_EVENT.MOVE_RIGHT)
 	render.log("start|move right")
 end
 

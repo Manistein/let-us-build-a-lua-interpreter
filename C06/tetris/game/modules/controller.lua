@@ -28,7 +28,7 @@ function controller:update(delta)
 end
 
 function controller:key_event(event)
-	self.uimgr:update_score(1)
+	self.blockmgr:key_event(event)
 end
 
 return controller
