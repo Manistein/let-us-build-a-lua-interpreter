@@ -869,7 +869,7 @@ static void forlist(struct lua_State* L, LexState* ls, FuncState* fs, TString* v
 	expr(fs, &e);
 	lua_assert(e.k == VCALL);
 	SET_ARG_C(get_instruction(fs, (&e)), 4);
-	luaK_reserveregs(fs, 5);
+	luaK_reserveregs(fs, 4);
 
 	check(L, ls, TK_DO);
 	forbody(L, ls, fs, 0);
