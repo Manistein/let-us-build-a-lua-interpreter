@@ -6,6 +6,8 @@
 #include "../vm/luado.h"
 #include "luatable.h"
 #include "luadebug.h"
+#include <stdlib.h>
+#include <corecrt.h>
 
 #define MAX_NUMBER_STR_SIZE 64
 
@@ -154,6 +156,22 @@ static int luaB_collectgarbage(struct lua_State* L) {
 	return 0;
 }
 
+static int luaB_srand(struct lua_State* L) {
+	time_t t;
+	srand((unsigned)time(&t));
+
+	return 0;
+}
+
+static int luaB_rand(struct lua_State* L) {
+	int range = luaL_tointeger(L, 1);
+	int ret = rand() % range;
+
+	lua_pushinteger(L, ret);
+
+	return 1;
+}
+
 const lua_Reg base_reg[] = {
 	{ "print", lprint },
 	{ "tostring", ltostring },
@@ -162,6 +180,8 @@ const lua_Reg base_reg[] = {
 	{ "setmetatable", luaB_setmetatable },
 	{ "getmetatable", luaB_getmetatable },
 	{ "collectgarbage", luaB_collectgarbage },
+	{ "srand", luaB_srand},
+	{ "rand", luaB_rand},
 	{ NULL, NULL },
 };
 
