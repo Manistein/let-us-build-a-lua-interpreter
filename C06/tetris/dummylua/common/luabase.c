@@ -164,7 +164,7 @@ static int luaB_srand(struct lua_State* L) {
 }
 
 static int luaB_rand(struct lua_State* L) {
-	int range = luaL_tointeger(L, 1);
+	int range = (int)luaL_tointeger(L, 1);
 	int ret = rand() % range;
 
 	lua_pushinteger(L, ret);

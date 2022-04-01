@@ -28,6 +28,12 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "luadebug.h"
 
 #define MAXASIZE (1u << MAXABITS)
+#define NILCONSTANT	{NULL}, LUA_TNIL
+
+static const Node dummynode_ = {
+	{{NILCONSTANT, 0}},  /* key */
+	{NILCONSTANT}		 /* value */
+};
 
 static int l_hashfloat(lua_Number n) {
     int i = 0;

@@ -228,7 +228,7 @@ static lu_mem traverse_strong_table(struct lua_State* L, struct Table* t) {
         markvalue(L, &t->array[i]); 
     }
 
-    for (int i = 0; i < twoto(t->lsizenode); i++) {
+    for (int i = 0; (i < twoto(t->lsizenode)) && !isdummy(t); i++) {
         Node* n = getnode(t, i);
         if (ttisnil(getval(n))) {
             TValue* deadkey = getwkey(n);

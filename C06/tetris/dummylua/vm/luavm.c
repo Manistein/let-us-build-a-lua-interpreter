@@ -654,8 +654,9 @@ static void op_tforcall(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 
 static void op_tforloop(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 	int sbx = GET_ARG_sBx(i);
-	if (!ttisnil((ra + 1))) {
-		setobj(ra, ra + 1);
+	StkId ra1 = ra + 1;
+	if (!ttisnil((ra1))) {
+		setobj(ra, ra1);
 		L->ci->l.savedpc += sbx;
 	}
 }

@@ -148,8 +148,6 @@ typedef struct Node {
     TValue value;
 } Node;
 
-const Node dummynode_;
-
 struct Table {
     CommonHeader;
     TValue* array;
