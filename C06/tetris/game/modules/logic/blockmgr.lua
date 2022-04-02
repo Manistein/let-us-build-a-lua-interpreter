@@ -2,6 +2,7 @@ local render = require("modules.core.render")
 local object = require("modules.core.object")
 local board_class = require("modules.logic.board")
 local lshape_class = require("modules.logic.block.lshape")
+local const = require("modules.const")
 
 local blockmgr = object:inherit()
 
@@ -21,8 +22,10 @@ function blockmgr:draw()
 end
 
 function blockmgr:key_event(event)
+	render.log("blockmgr:key_event " .. tostring(event) .. " " .. tostring(const.KEY_EVENT.MOVE_LEFT))
 	if event == const.KEY_EVENT.MOVE_LEFT then 
 		self.current_shape:move_left(1)
+		render.log("blockmgr:key_event move_left")
 	elseif event == const.KEY_EVENT.MOVE_RIGHT then 
 		self.current_shape:move_right(1)
 	elseif event == const.KEY_EVENT.MOVE_UP then 

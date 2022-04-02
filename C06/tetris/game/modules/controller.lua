@@ -13,6 +13,7 @@ end
 
 function controller:reset()
 	self.uimgr:reset()
+	self.blockmgr:reset()
 	render.log("controller object reset")
 end
 

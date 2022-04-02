@@ -6,12 +6,12 @@ local lshape = base:inherit()
 
 function lshape:init()
 	base.init(self)
-	self.shape = {
-		{ 0, 2 },
-		{ 0, 1 },
-		{ 0, 0 },
-		{ 0, -1 },
-	}
+	self.vertexes = { 
+		{x = 0, y = 2}, 
+		{x = 0, y = 1}, 
+		{x = 0, y = 0}, 
+		{x = 0, y = -1} 
+	}	 
 end
 
 return lshape
