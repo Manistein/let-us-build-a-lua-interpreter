@@ -653,7 +653,7 @@ static void discharge2reg(FuncState* fs, expdesc* e, int reg) {
 		luaK_codeABx(fs, OP_LOADK, reg, e->u.info);
 	} break;
 	case VRELOCATE: {
-		SET_ARG_A(fs->p->code[e->u.info], reg);
+		SET_ARG_A(fs->p->code[e->u.info], fs->freereg - 1);
 	} break;
 	case VNONRELOC: {
 		if (e->u.info != reg) {
