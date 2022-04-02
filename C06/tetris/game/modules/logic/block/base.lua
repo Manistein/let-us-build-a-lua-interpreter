@@ -6,22 +6,24 @@ local base = object:inherit()
 
 -- 局部坐标系，center是局部坐标系的原点
 function base:init()
-	self.center_x = 0
-	self.center_y = 0
-	self.vertexes = { {x = 0, y = 0}, {x = 0, y = 0}, {x = 0, y = 0}, {x = 0, y = 0} }	
+	self.center_x = 5 
+	self.center_y = 10
+	self.vertexes = { {x = 0, y = 2}, {x = 0, y = 1}, {x = 0, y = 0}, {x = 0, y = -1} }	
 	self.color = rand(const.BLOCK_COLOR.MAX_COLOR)
 end
 
 function base:draw()
 	render.log("base:draw")
+	local count = 0
 	for k, v in pairs(self.vertexes) do 
+		count = count + 1
 		local grid_x = self.center_x + v.x 
 		local grid_y = self.center_y + v.y
 
 		local x = grid_x * const.BOX_SIZE.WIDTH + GLOBAL_VAR.BOARD_X
 		local y = grid_y * const.BOX_SIZE.HEIGHT + GLOBAL_VAR.BOARD_Y
 
-		render.log("base:draw " .. tostring(x) .. " " .. tostring(y))
+		render.log("base:draw " .. tostring(x) .. " " .. tostring(y) .. " " .. tostring(count))
 		render.draw_box(x, y, const.BOX_SIZE.WIDTH, const.BOX_SIZE.HEIGHT, self.color)
 	end
 end

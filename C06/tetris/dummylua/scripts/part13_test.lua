@@ -1,8 +1,8 @@
-local tbl = { 0, 1, 3, 5 }
+local tbl = { { x = 0, y = 2 }, { x = 0, y = 1 }, { x = 0, y = 0 }, { x = 0, y = -1 } }
 for k, v in pairs(tbl) do 
-	print(k, v)
+	print(k, v.x, v.y)
 end 
-print("hahahah")
+print("hahahaha")
 
 -- -- test package path
 -- print(package.path)

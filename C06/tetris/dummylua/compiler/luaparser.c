@@ -811,7 +811,7 @@ static void forbody(struct lua_State* L, LexState* ls, FuncState* fs, int is_num
 	else {
 		luaK_patchtohere(fs, jmp);
 		luaK_codeABC(fs, OP_TFORCALL, ra, 0, 2);
-		luaK_codeAsBx(fs, OP_TFORLOOP, fs->freereg - 3, loop_init - fs->pc);
+		luaK_codeAsBx(fs, OP_TFORLOOP, ra + 2, loop_init - fs->pc);
 	}
 	leaveblock(L, ls);
 
