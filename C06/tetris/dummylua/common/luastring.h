@@ -30,8 +30,8 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 
 void luaS_init(struct lua_State* L);
 int luaS_resize(struct lua_State* L, unsigned int nsize); // only for short string
-struct TString* luaS_newlstr(struct lua_State* L, const char* str, unsigned int l);
-struct TString* luaS_new(struct lua_State* L, const char* str, unsigned int l);
+struct TString* luaS_newlstr(struct lua_State* L, const char* str, size_t l);
+struct TString* luaS_new(struct lua_State* L, const char* str, size_t l);
 void luaS_remove(struct lua_State* L, struct TString* ts); // remove TString from stringtable, only for short string
 
 void luaS_clearcache(struct lua_State* L);

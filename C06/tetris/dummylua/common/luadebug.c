@@ -15,7 +15,7 @@ static TString* getfuncname(struct lua_State* L, struct CallInfo* ci) {
 
 	if (ci->func->tt_ == LUA_TLCL) {
 		struct LClosure* cl = gco2lclosure(gcvalue(ci->func));
-		int pc = ci->l.savedpc - cl->p->code - 1;
+		size_t pc = ci->l.savedpc - cl->p->code - 1;
 		Instruction i = cl->p->code[pc];
 		if (GET_OPCODE(i) == OP_CALL) {
 			int narg = GET_ARG_B(i);

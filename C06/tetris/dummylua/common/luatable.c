@@ -149,7 +149,7 @@ void luaH_free(struct lua_State* L, struct Table* t) {
 
 const TValue* luaH_getint(struct lua_State* L, struct Table* t, lua_Integer key) {
     // 1 <= key <= arraysize
-    if (cast(unsigned int, key) - 1 < t->arraysize) {
+    if (cast(size_t, key) - 1 < t->arraysize) {
         return cast(const TValue*, &t->array[key - 1]);        
     }
     else {

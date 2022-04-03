@@ -50,7 +50,7 @@ void* luaM_growaux_(struct lua_State* L, void* ptr, int* size, int element, int 
 
 void* luaM_realloc(struct lua_State* L, void* ptr, size_t osize, size_t nsize) {
     struct global_State* g = G(L);
-    int oldsize = ptr ? osize : 0;
+    size_t oldsize = ptr ? osize : 0;
 
     void* ret = (*g->frealloc)(g->ud, ptr, oldsize, nsize);
     if (ret == NULL && nsize > 0) {

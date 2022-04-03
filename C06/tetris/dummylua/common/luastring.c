@@ -105,7 +105,7 @@ static struct TString* createstrobj(struct lua_State* L, const char* str, int ta
 }
 
 // only short strings can be interal
-static struct TString* internalstr(struct lua_State* L, const char* str, unsigned int l) {
+static struct TString* internalstr(struct lua_State* L, const char* str, size_t l) {
     struct global_State* g = G(L);
     struct stringtable* tb = &g->strt;
     unsigned int h = luaS_hash(L, str, l, g->seed); 
@@ -133,7 +133,7 @@ static struct TString* internalstr(struct lua_State* L, const char* str, unsigne
     return ts;
 }
 
-struct TString* luaS_newlstr(struct lua_State* L, const char* str, unsigned int l) {
+struct TString* luaS_newlstr(struct lua_State* L, const char* str, size_t l) {
     if (l <= MAXSHORTSTR) {
         return internalstr(L, str, l); 
     }
@@ -142,7 +142,7 @@ struct TString* luaS_newlstr(struct lua_State* L, const char* str, unsigned int 
     }
 }
 
-struct TString* luaS_new(struct lua_State* L, const char* str, unsigned int l) {
+struct TString* luaS_new(struct lua_State* L, const char* str, size_t l) {
     unsigned int hash = point2uint(str); 
     int i = hash % STRCACHE_M;
     for (int j = 0; j < STRCACHE_N; j ++) {

@@ -113,8 +113,8 @@ int luaO_concat(struct lua_State* L, TValue* arg1, TValue* arg2, TValue* target)
 
 	char* s1 = getstr(o1);
 	char* s2 = getstr(o2);
-	int s1_sz = strlen(s1);
-	int s2_sz = strlen(s2);
+	size_t s1_sz = strlen(s1);
+	size_t s2_sz = strlen(s2);
 
 	char* new_s = (char*)malloc(s1_sz + s2_sz + 1);
 	memcpy(new_s, s1, s1_sz);
@@ -128,7 +128,7 @@ int luaO_concat(struct lua_State* L, TValue* arg1, TValue* arg2, TValue* target)
 	return 1;
 }
 
-static void pushstr(struct lua_State* L, const char* str, unsigned int l) {
+static void pushstr(struct lua_State* L, const char* str, size_t l) {
 	TString* ts = luaS_newlstr(L, str, l);
 	setgco(L->top, obj2gco(ts));
 	increase_top(L);
