@@ -8,6 +8,9 @@ local tshape_class = require("modules.logic.block.tshape")
 local zshape_class = require("modules.logic.block.zshape")
 local const = require("modules.const")
 
+local downward_gap_by_millisecond = 1000 
+local duration = 0
+
 local blockmgr = object:inherit()
 
 function blockmgr:init()
@@ -62,6 +65,14 @@ function blockmgr:key_event(event)
 	elseif event == const.KEY_EVENT.MOVE_DOWN then 
 		self.current_shape:move_down(1)
 	end	
+end
+
+function blockmgr:update(delta)
+	if duration >= downward_gap_by_millisecond then 
+		self.current_shape:move_down(1)
+		duration = 0
+	end
+	duration = duration + delta
 end
 
 return blockmgr

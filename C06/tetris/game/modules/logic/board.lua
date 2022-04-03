@@ -14,11 +14,25 @@ function board:init()
 	GLOBAL_VAR.BOARD_X = self.x 
 	GLOBAL_VAR.BOARD_Y = self.y
 
+	-- self.grids = {}
+	-- for i = 1, const.BOARD_SIZE.Y do
+	-- 	self.grids[i] = {}
+	-- 	for j = 1, const.BOARD_SIZE.X do 
+	-- 		self.grids[i][j] = { color = 0, is_occupied = false }
+	-- 	end 
+	-- end  
+
 	render.log("board|init|success")
 end
 
 function board:draw()
 	render.draw_box(self.x, self.y, self.width, self.height, -1) 
+end
+
+function board:occupy(x, y, color)
+	local grid = self.grids[x - 1][y - 1]
+	grid.is_occupied = true 
+	grid.color = color	
 end
 
 return board

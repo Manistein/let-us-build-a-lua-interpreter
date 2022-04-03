@@ -22,6 +22,8 @@ function controller:exit()
 end
 
 function controller:update(delta)
+	self.blockmgr:update(delta)
+
 	render.begin_draw()
 	self.uimgr:draw()
 	self.blockmgr:draw()

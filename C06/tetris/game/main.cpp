@@ -12,7 +12,7 @@ WCHAR* szTitle = L"";                  // The title bar text
 WCHAR* szWindowClass = L"Tetris";            // the main window class name
 HWND g_hWnd = NULL;
 int g_iScreenWidth = 1024;
-int g_iScreenHeight = 768;
+int g_iScreenHeight = 800;
 
 const int iFrameGapByMillisecond = 33;
 
