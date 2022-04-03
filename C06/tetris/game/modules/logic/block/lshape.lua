@@ -2,6 +2,7 @@ local render = require("modules.core.render")
 local base = require("modules.logic.block.base")
 local const  = require("modules.const")
 
+render.log("lshape class " .. tostring(base))
 local lshape = base:inherit()
 
 function lshape:init()

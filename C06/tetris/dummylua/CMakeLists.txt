@@ -35,7 +35,7 @@ IF (WIN32)
     source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${VM_SRC})
     source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${COMPILER_SRC})
     source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${TEST_SRC})
-    # source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${MAIN})
+    source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${MAIN})
 
     source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${CLIB_HEADER})
     source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${COMMON_HEADER})
@@ -46,9 +46,9 @@ IF (WIN32)
 	  target_compile_definitions(dummylua PRIVATE _WINDOWS_PLATFORM_=1)
     target_compile_definitions(dummylua PRIVATE _CRT_SECURE_NO_WARNINGS=1)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy
-      $<TARGET_FILE_DIR:${PROJECT_NAME}>/dummylua.lib
-      ${CMAKE_CURRENT_SOURCE_DIR})
+     COMMAND ${CMAKE_COMMAND} -E copy
+     $<TARGET_FILE_DIR:${PROJECT_NAME}>/dummylua.lib
+     ${CMAKE_CURRENT_SOURCE_DIR})
 ENDIF()
 
 target_include_directories(dummylua PUBLIC

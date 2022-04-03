@@ -1,8 +1,15 @@
-local tbl = { { x = 0, y = 2 }, { x = 0, y = 1 }, { x = 0, y = 0 }, { x = 0, y = -1 } }
-for k, v in pairs(tbl) do 
-	print(k, v.x, v.y)
+local vertices = { {x=0,y=0},{x=1,y=1},{x=2,y=2},{x=3,y=3} }
+local vertex = vertices[1]
+local ret  = {}
+ret.right_most_x = vertex.x
+
+for idx, v in ipairs(vertices) do 
+	if v.x > ret.right_most_x then 
+		ret.right_most_x = v.x
+	end 
 end 
-print("hahahaha")
+
+print(ret.right_most_x)
 
 -- -- test package path
 -- print(package.path)

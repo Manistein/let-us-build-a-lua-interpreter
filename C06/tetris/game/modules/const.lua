@@ -42,4 +42,6 @@ const.BLOCK_TYPE = {
 	TOTAL  = 6,
 }
 
+const.MAX_ROTATE = 4
+
 return const

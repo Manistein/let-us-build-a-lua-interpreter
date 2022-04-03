@@ -13,10 +13,18 @@ local blockmgr = object:inherit()
 function blockmgr:init()
 	self.board = board_class:new()
 
-	self.current_shape = self:create_block()
-	self.next_shape = self:create_block()
-	self.next_shape:update_center(13, 2)
+	self:next_turn()	
 	render.log("blockmgr|init|success")
+end
+
+function blockmgr:next_turn()
+	self.current_shape = self:create_block()
+	self.current_shape:update_center(4, 0)
+	self.current_shape:random_rotate()
+
+	self.next_shape = self:create_block()
+	self.next_shape:update_center(13, 5)
+	self.next_shape:random_rotate()
 end
 
 function blockmgr:create_block()
@@ -45,10 +53,8 @@ function blockmgr:draw()
 end
 
 function blockmgr:key_event(event)
-	render.log("blockmgr:key_event " .. tostring(event) .. " " .. tostring(const.KEY_EVENT.MOVE_LEFT))
 	if event == const.KEY_EVENT.MOVE_LEFT then 
 		self.current_shape:move_left(1)
-		render.log("blockmgr:key_event move_left")
 	elseif event == const.KEY_EVENT.MOVE_RIGHT then 
 		self.current_shape:move_right(1)
 	elseif event == const.KEY_EVENT.MOVE_UP then 

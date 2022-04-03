@@ -236,7 +236,7 @@ static void codecmp(FuncState* fs, int op, expdesc* e1, expdesc* e2) {
 		luaK_codeABC(fs, OP_LT, 1, e1->u.info, e2->u.info);
 	} break;
 	case BINOPR_GREATEQ: {
-		luaK_codeABC(fs, OP_LE, 0, e1->u.info, e2->u.info);
+		luaK_codeABC(fs, OP_LT, 0, e1->u.info, e2->u.info);
 	} break;
 	case BINOPR_LESSEQ: {
 		luaK_codeABC(fs, OP_LE, 1, e1->u.info, e2->u.info);
