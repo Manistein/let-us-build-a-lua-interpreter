@@ -6,12 +6,23 @@ local lshape = base:inherit()
 
 function lshape:init()
 	base.init(self)
-	self.vertexes = { 
-		{x = 0, y = 2}, 
-		{x = 0, y = 1}, 
-		{x = 0, y = 0}, 
-		{x = 0, y = -1} 
-	}	 
+	self.center_idx = 3
+
+	if self:try_flip() then 
+		self.vertexes = { 
+			{x = 0, y = 2}, 
+			{x = 0, y = 1}, 
+			{x = 0, y = 0}, 
+			{x = 1, y = 0},
+		}
+	else 
+		self.vertexes = { 
+			{x = 0, y = 2}, 
+			{x = 0, y = 1}, 
+			{x = 0, y = 0}, 
+			{x = -1, y = 0},
+		}
+	end	 
 end
 
 return lshape

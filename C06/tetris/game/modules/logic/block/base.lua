@@ -8,6 +8,7 @@ local base = object:inherit()
 function base:init()
 	self.center_x = 5 
 	self.center_y = 10
+	self.center_idx = 0
 	self.vertexes = { {x = 0, y = 0}, {x = 0, y = 0}, {x = 0, y = 0}, {x = 0, y = 0} }	
 	self.color = rand(const.BLOCK_COLOR.MAX_COLOR)
 end
@@ -56,6 +57,25 @@ function base:move_down(y)
 end
 
 function base:destroy()
+end
+
+function base:try_flip()
+	local t = rand(2)
+	if t == const.FLIP_TYPE.NORMAL then 
+		return false
+	else
+		return true
+	end
+end
+
+function base:rotate90()
+	for idx, v in ipairs(self.vertexes) do 
+		local rotate_x = v.y 
+		local rotate_y = -v.x
+
+		self.vertexes[idx].x = rotate_x
+		self.vertexes[idx].y = rotate_y
+	end
 end
 
 return base

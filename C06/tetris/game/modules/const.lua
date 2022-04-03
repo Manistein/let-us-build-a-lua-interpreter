@@ -28,4 +28,9 @@ const.BOARD_SIZE = {
 	Y = 20,
 }
 
+const.FLIP_TYPE = {
+	NORMAL  = 0, -- 不翻转
+	FLIPED  = 1, -- 翻转
+}
+
 return const
