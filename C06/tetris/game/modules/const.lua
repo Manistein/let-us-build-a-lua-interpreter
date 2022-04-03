@@ -33,4 +33,13 @@ const.FLIP_TYPE = {
 	FLIPED  = 1, -- 翻转
 }
 
+const.BLOCK_TYPE = {
+	LSHAPE = 1,
+	SQUARE = 2,
+	STICK  = 3,
+	TSHAPE = 4,
+	ZSHAPE = 5,
+	TOTAL  = 6,
+}
+
 return const

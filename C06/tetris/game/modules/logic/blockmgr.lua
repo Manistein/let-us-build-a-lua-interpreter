@@ -13,16 +13,35 @@ local blockmgr = object:inherit()
 function blockmgr:init()
 	self.board = board_class:new()
 
-	self.current_shape = lshape_class:new()
+	self.current_shape = self:create_block()
+	self.next_shape = self:create_block()
+	self.next_shape:update_center(13, 2)
 	render.log("blockmgr|init|success")
+end
+
+function blockmgr:create_block()
+	local block_type = rand(const.BLOCK_TYPE.TOTAL)
+	if block_type == const.BLOCK_TYPE.LSHAPE then 
+		return lshape_class:new()
+	elseif block_type == const.BLOCK_TYPE.SQUARE then 
+		return square_class:new()
+	elseif block_type == const.BLOCK_TYPE.STICK then 
+		return stick_class:new()
+	elseif block_type == const.BLOCK_TYPE.TSHAPE then 
+		return tshape_class:new()
+	else
+		return zshape_class:new()
+	end
 end
 
 function blockmgr:reset()
 end
 
 function blockmgr:draw()
+	render.draw_text(740, 0, "next block:")
 	self.board:draw()
 	self.current_shape:draw()
+	self.next_shape:draw()
 end
 
 function blockmgr:key_event(event)
