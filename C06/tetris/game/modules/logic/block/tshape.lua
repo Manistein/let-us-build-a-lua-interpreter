@@ -6,6 +6,7 @@ local tshape = base:inherit()
 
 function tshape:init()
 	base.init(self)
+	self.center_idx = 2
 
 	self.vertexes = { 
 		{x = -1, y = 0}, 

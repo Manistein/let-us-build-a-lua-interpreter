@@ -6,7 +6,7 @@ local square = base:inherit()
 
 function square:init()
 	base.init(self)
-	self.center_idx = 3
+	self.center_idx = 1 
 
 	self.vertexes = { 
 		{x = 0, y = 0}, 

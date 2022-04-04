@@ -6,11 +6,16 @@ local base = object:inherit()
 
 -- 局部坐标系，center是局部坐标系的世界坐标
 function base:init()
-	self.center_x = 5 
-	self.center_y = 10
+	self.center_x = 1 
+	self.center_y = 1
 
 	self.vertexes = { {x = 0, y = 0}, {x = 0, y = 0}, {x = 0, y = 0}, {x = 0, y = 0} }	
 	self.color = rand(const.BLOCK_COLOR.MAX_COLOR)
+	self.center_idx = 0
+end
+
+function base:get_color()
+	return self.color
 end
 
 function base:random_rotate()
@@ -28,8 +33,8 @@ end
 
 function base:draw()
 	for k, v in pairs(self.vertexes) do 
-		local grid_x = self.center_x + v.x 
-		local grid_y = self.center_y + v.y
+		local grid_x = self.center_x + v.x - 1 
+		local grid_y = self.center_y + v.y - 1
 
 		local x = grid_x * const.BOX_SIZE.WIDTH + GLOBAL_VAR.BOARD_X
 		local y = grid_y * const.BOX_SIZE.HEIGHT + GLOBAL_VAR.BOARD_Y
@@ -44,7 +49,6 @@ function base:update_center(x, y)
 end
 
 function base:get_border_pos()
-	render.log("xxxxxxxxxxxxx")
 	local vertex = self.vertexes[1]
 
 	local ret = {}
@@ -74,11 +78,37 @@ function base:get_border_pos()
 	return ret
 end
 
+function base:get_world_pos()
+	local wpos = {}
+
+	for idx, v in ipairs(self.vertexes) do 
+		wpos[idx] = {}
+		wpos[idx].x = v.x + self.center_x
+		wpos[idx].y = v.y + self.center_y
+	end 
+
+	return wpos
+end
+
+function base:get_local_pos()
+	return self.vertexes
+end
+
+function base:get_center_world_pos()
+	local ret = {}
+	local ver = self.vertexes[self.center_idx]
+
+	ret.x = self.center_x + ver.x
+	ret.y = self.center_y + ver.y
+
+	return ret 
+end
+
 function base:move_left(x)
 	local pos = self.center_x - x 
 	local ret = self:get_border_pos()
 	local lmost = ret.left_most_x + pos 
-	if lmost >= 0 then 
+	if lmost > 0 then 
 		self.center_x = pos 
 	end
 end
@@ -88,7 +118,7 @@ function base:move_right(x)
 	local ret = self:get_border_pos()
 
 	local rmost = ret.right_most_x + pos
-	if rmost < const.BOARD_SIZE.X then 
+	if rmost <= const.BOARD_SIZE.X then 
 		self.center_x = pos
 	end  
 end
@@ -98,7 +128,7 @@ function base:move_down(y)
 	local ret = self:get_border_pos()
 	local upmost = ret.top_most_y + pos
 
-	if upmost < const.BOARD_SIZE.Y then
+	if upmost <= const.BOARD_SIZE.Y then
 		self.center_y = pos 
 	end
 end

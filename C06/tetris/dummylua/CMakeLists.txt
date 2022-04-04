@@ -25,8 +25,8 @@ add_library(dummylua STATIC ${SRC} ${INC})
 # add_executable(dummylua main.c ${SRC} ${INC})
 
 IF(NOT WIN32)
-	target_link_libraries(dummylua m)
-  target_link_libraries(dummylua dl)
+    target_link_libraries(dummylua m)
+    target_link_libraries(dummylua dl)
 ENDIF()
 
 IF (WIN32)

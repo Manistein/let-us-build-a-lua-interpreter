@@ -6,6 +6,7 @@ local stick = base:inherit()
 
 function stick:init()
 	base.init(self)
+	self.center_idx = 3
 
 	self.vertexes = { 
 		{x = 0, y = -2}, 

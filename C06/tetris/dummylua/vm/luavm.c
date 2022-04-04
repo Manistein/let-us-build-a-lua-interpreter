@@ -985,7 +985,7 @@ static void debug_print(struct lua_State* L) {
 }
 
 static void newframe(struct lua_State* L) {
-	//debug_print(L);
+	debug_print(L);
 
 	int count = 0;
 	bool is_loop = true;

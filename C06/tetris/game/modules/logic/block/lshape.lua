@@ -7,7 +7,7 @@ local lshape = base:inherit()
 
 function lshape:init()
 	base.init(self)
-	self.center_idx = 3
+	self.center_idx = 3 
 
 	if self:try_flip() then 
 		self.vertexes = { 

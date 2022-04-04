@@ -22,11 +22,11 @@ end
 
 function blockmgr:next_turn()
 	self.current_shape = self:create_block()
-	self.current_shape:update_center(4, 0)
+	self.current_shape:update_center(5, 1)
 	self.current_shape:random_rotate()
 
 	self.next_shape = self:create_block()
-	self.next_shape:update_center(13, 5)
+	self.next_shape:update_center(14, 6)
 	self.next_shape:random_rotate()
 end
 
@@ -46,6 +46,8 @@ function blockmgr:create_block()
 end
 
 function blockmgr:reset()
+	self.board:reset()
+	self:next_turn()
 end
 
 function blockmgr:draw()
@@ -61,15 +63,27 @@ function blockmgr:key_event(event)
 	elseif event == const.KEY_EVENT.MOVE_RIGHT then 
 		self.current_shape:move_right(1)
 	elseif event == const.KEY_EVENT.MOVE_UP then 
-		self.current_shape:rotate90()
+		-- self.current_shape:rotate90()
 	elseif event == const.KEY_EVENT.MOVE_DOWN then 
 		self.current_shape:move_down(1)
 	end	
 end
 
+function blockmgr:try_occupy()
+	local center = self.current_shape:get_center_world_pos()
+	local vertexes = self.current_shape:get_local_pos()
+
+	if self.board:can_occupy(center.x, center.y, vertexes) then 
+		render.log("blockmgr:try_occupy is true")
+		self.board:occupy(center.x, center.y, vertexes, self.current_shape:get_color())
+		self:next_turn()
+	end
+end
+
 function blockmgr:update(delta)
 	if duration >= downward_gap_by_millisecond then 
 		self.current_shape:move_down(1)
+		self:try_occupy()
 		duration = 0
 	end
 	duration = duration + delta
