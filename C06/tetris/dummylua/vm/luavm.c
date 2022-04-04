@@ -968,7 +968,7 @@ static void debug_print(struct lua_State* L) {
 	struct GCObject* gco = gcvalue(L->ci->func);
 	LClosure* cl = gco2lclosure(gco);
 	for (int i = 0; i < cl->p->sizek; i++) {
-		fprintf(handle, "%d", i);
+		fprintf(handle, "[%d:%d]", i, i + 256);
 		print_TValue(&cl->p->k[i], handle);
 	}
 	fprintf(handle, "\n");

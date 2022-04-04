@@ -1,15 +1,16 @@
-local vertices = { {x=0,y=0},{x=1,y=1},{x=2,y=2},{x=3,y=3} }
-local vertex = vertices[1]
-local ret  = {}
-ret.right_most_x = vertex.x
+local const = {}
+const.BOARD_SIZE = { X = 10, Y = 20 }
 
-for idx, v in ipairs(vertices) do 
-	if v.x > ret.right_most_x then 
-		ret.right_most_x = v.x
-	end 
-end 
+local grids = {}
 
-print(ret.right_most_x)
+for i = 1, const.BOARD_SIZE.X do 
+	grids[i] = {}
+	for j = 1, const.BOARD_SIZE.Y do 
+		grids[i][j] = { color = 0, is_occupied = false }
+		print(tostring(i) .. " " .. tostring(j))
+		print(grids[i][j].color)
+	end
+end
 
 -- -- test package path
 -- print(package.path)

@@ -34,6 +34,18 @@ static void init_exp(expdesc* e, expkind k, int i) {
 	e->u.info = i;
 	e->t = NO_JUMP;
 	e->f = NO_JUMP;
+
+	switch (k) {
+	case VINT: {
+		e->u.i = i;
+	}break;
+	case VFLT: {
+		e->u.r = (lua_Number)i;
+	}break;
+	default: {
+		e->u.info = i;
+	}break;
+	}
 }
 
 static int newupvalues(FuncState* fs, expdesc* e, TString* n) {
