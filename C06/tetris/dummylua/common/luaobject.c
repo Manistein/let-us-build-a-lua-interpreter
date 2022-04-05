@@ -91,7 +91,15 @@ int luaO_arith(struct lua_State* L, int op, TValue* v1, TValue* v2) {
 
 		numarith(L, op, &nv1, &nv2);
 
-		setobj(v1, &nv1);
+		if (ttisinteger(v1) && ttisinteger(v2)) {
+			TValue integer;
+			setivalue(&integer, (lua_Integer)nv1.value_.n);
+
+			setobj(v1, &integer);
+		}
+		else {
+			setobj(v1, &nv1);
+		}
 	} return 1;
 	default: lua_assert(0);
 	}

@@ -20,6 +20,7 @@ void p13_test_main() {
 		check_error(L, ok);
 	}
 	else {
+		check_error(L, ok);
 		printf("failure to load file %s\n", filename);
 	}
 

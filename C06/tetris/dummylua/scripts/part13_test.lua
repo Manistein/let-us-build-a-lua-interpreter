@@ -7,9 +7,13 @@ for i = 1, const.BOARD_SIZE.X do
 	grids[i] = {}
 	for j = 1, const.BOARD_SIZE.Y do 
 		grids[i][j] = { color = 0, is_occupied = false }
-		print(tostring(i) .. " " .. tostring(j))
-		print(grids[i][j].color)
 	end
+end
+
+local vertexes = { {x=1,y=20}, {x=2,y=20}, {x=2,y=19}, {x=3,y=19} }
+for idx, v in ipairs(vertexes) do 
+	print(v.x, v.y)
+	print(grids[v.x][v.y])
 end
 
 -- -- test package path
