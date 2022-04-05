@@ -67,12 +67,17 @@ function blockmgr:key_event(event)
 	elseif event == const.KEY_EVENT.MOVE_DOWN then 
 		self.current_shape:move_down(1)
 	end	
+
+	self:try_occupy()
 end
 
+local count = 0
 function blockmgr:try_occupy()
 	local center = self.current_shape:get_center_world_pos()
 	local vertexes = self.current_shape:get_local_pos()
 
+	count = count + 1
+	render.log("blockmgr:try_occupy " .. tostring(count))
 	if self.board:can_occupy(center.x, center.y, vertexes) then 
 		render.log("blockmgr:try_occupy is true")
 		self.board:occupy(center.x, center.y, vertexes, self.current_shape:get_color())

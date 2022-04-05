@@ -46,23 +46,7 @@ function board:occupy(x, y, vertexes, color)
 		local grid = self.grids[gx][gy]
 		grid.is_occupied = true 
 		grid.color = color
-
-		render.log("board:occupy x:" .. tostring(gx) .. " y:" .. tostring(gy))
 	end
-
-	local count = 0 
-	for i = 1, const.BOARD_SIZE.X do 
-		for j = 1, const.BOARD_SIZE.Y do 
-			local grid = self.grids[i][j]
-
-			render.log("check is_occupied:" .. tostring(grid.is_occupied) .. " " .. tostring(count))
-			if grid.is_occupied then 
-				count = count + 1 
-			end
-		end
-	end 
-
-	render.log("occupy grids count:" .. tostring(count))
 end
 
 function board:can_occupy(x, y, vertexes)
