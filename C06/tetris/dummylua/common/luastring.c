@@ -108,7 +108,7 @@ static struct TString* createstrobj(struct lua_State* L, const char* str, int ta
 static struct TString* internalstr(struct lua_State* L, const char* str, size_t l) {
     struct global_State* g = G(L);
     struct stringtable* tb = &g->strt;
-    unsigned int h = luaS_hash(L, str, l, g->seed); 
+    unsigned int h = luaS_hash(L, str, (unsigned int)l, g->seed); 
     struct TString** list = &tb->hash[lmod(h, tb->size)];
 
     for (struct TString* ts = *list; ts; ts = ts->u.hnext) {

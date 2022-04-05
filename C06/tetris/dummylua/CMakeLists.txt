@@ -43,7 +43,7 @@ IF (WIN32)
     source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${VM_HEADER})
     source_group(TREE ${CMAKE_SOURCE_DIR} FILES ${TEST_HEADER})
 
-	  target_compile_definitions(dummylua PRIVATE _WINDOWS_PLATFORM_=1)
+	target_compile_definitions(dummylua PRIVATE _WINDOWS_PLATFORM_=1)
     target_compile_definitions(dummylua PRIVATE _CRT_SECURE_NO_WARNINGS=1)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
      COMMAND ${CMAKE_COMMAND} -E copy

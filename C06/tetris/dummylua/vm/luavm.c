@@ -31,7 +31,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 
 // if slot is null, then it means that t is not a table
 void luaV_finishget(struct lua_State* L, TValue* t, const StkId key, StkId val, TValue* slot) {
-	TValue* tm;
+	TValue* tm = NULL;
 	for (int i = 0; i < MAXLOOP; i++) {
 		if (slot == NULL) { // t is not a table
 			tm = luaT_gettmbyobj(L, t, TM_INDEX);
@@ -985,7 +985,9 @@ static void debug_print(struct lua_State* L) {
 }
 
 static void newframe(struct lua_State* L) {
+#ifdef PRINT_DEBUG_LOG_ON
 	debug_print(L);
+#endif
 
 	int count = 0;
 	bool is_loop = true;

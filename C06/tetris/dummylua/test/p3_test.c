@@ -96,7 +96,7 @@ void test_gc(struct lua_State* L) {
 }
 
 void p3_test_main() {
-    printf("short string len:%ld, long string len:%ld \n", strlen(g_shrstr), strlen(g_lngstr));
+    printf("short string len:%lld, long string len:%lld \n", strlen(g_shrstr), strlen(g_lngstr));
 
     struct lua_State* L = luaL_newstate();
 

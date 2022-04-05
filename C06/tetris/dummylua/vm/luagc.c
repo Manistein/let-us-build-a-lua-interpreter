@@ -38,6 +38,15 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 	(o)->marked &= cast(lu_byte, ~(bitmask(BLACKBIT) | WHITEBITS)); \
 	(o)->marked |= luaC_white(g)
 
+static debug_print_gcinfo(struct lua_State* L, const char* state) {
+#ifdef PRINT_DEBUG_LOG_ON
+	FILE* handle = fopen("./gcstate.txt", "ab+");
+	fprintf(handle, "gcstate:%s\n", state);
+	fflush(handle);
+	fclose(handle);
+#endif
+}
+
 struct GCObject* luaC_newobj(struct lua_State* L, lu_byte tt_, size_t size) {
     struct global_State* g = G(L);
     struct GCObject* obj = (struct GCObject*)luaM_realloc(L, NULL, 0, size);
@@ -61,7 +70,8 @@ void reallymarkobject(struct lua_State* L, struct GCObject* gco) {
             linkgclist(gco2tbl(gco), g->gray);
         } break;
 		case LUA_TLCL:{
-			linkgclist(gco2lclosure(gco), g->gray);
+			LClosure* lcl = gco2lclosure(gco);
+			linkgclist(lcl, g->gray);
 		} break;
 		case LUA_TCCL:{
 			linkgclist(gco2cclosure(gco), g->gray);
@@ -123,10 +133,19 @@ static void restart_collection(struct lua_State* L) {
 }
 
 static lu_mem traverse_thread(struct lua_State* L, struct lua_State* th) {
+	struct global_State* g = G(L);
+
     TValue* o = th->stack;
     for (; o < th->top; o ++) {
         markvalue(L, o);
     }
+
+	if (g->gcstate == GCSinsideatomic) {
+		StkId limit = L->stack + L->stack_size;
+		for (; o < limit; o++) {
+			setnilvalue(o);
+		}
+	}
 
     return sizeof(struct lua_State) + sizeof(TValue) * th->stack_size + sizeof(struct CallInfo) * th->nci;
 }
@@ -320,7 +339,10 @@ static lu_mem traverse_lclosure(struct lua_State* L, struct LClosure* cl) {
 }
 
 static lu_mem traverse_cclosure(struct lua_State* L, struct CClosure* cc) {
-	// TODO process upvalues
+	for (int i = 0; i < cc->nupvalues; i++) {
+		markvalue(L, &cc->upvalues[i]);
+	}
+
 	return sizeof(struct CClosure);
 }
 
@@ -670,9 +692,15 @@ static lu_mem singlestep(struct lua_State* L) {
             g->GCmemtrav = 0;
             restart_collection(L);
             g->gcstate = GCSpropagate;
+
+			debug_print_gcinfo(L, "-----new gc cycle-----");
+			debug_print_gcinfo(L, "GCSpause");
+
             return g->GCmemtrav;
         } break;
         case GCSpropagate:{
+			debug_print_gcinfo(L, "GCSpropagate");
+
             g->GCmemtrav = 0;
             propagatemark(L);
             if (g->gray == NULL) {
@@ -681,6 +709,8 @@ static lu_mem singlestep(struct lua_State* L) {
             return g->GCmemtrav;
         } break;
         case GCSatomic:{
+			debug_print_gcinfo(L, "GCSatomic");
+
             g->GCmemtrav = 0;
             if (g->gray) {
                 propagateall(L);
@@ -691,21 +721,27 @@ static lu_mem singlestep(struct lua_State* L) {
             return g->GCmemtrav;
         } break;
         case GCSsweepallgc: {
+			debug_print_gcinfo(L, "GCSsweepallgc");
             return sweepstep(L, GCSsweepfinobjs, &G(L)->finobjs);
         } break;
 		case GCSsweepfinobjs: {	
+			debug_print_gcinfo(L, "GCSsweepfinobjs");
 			return sweepstep(L, GCSsweeptobefnz, &G(L)->tobefnz);
 		} break;
 		case GCSsweeptobefnz: {
+			debug_print_gcinfo(L, "GCSsweeptobefnz");
 			return sweepstep(L, GCSsweepend, NULL);
 		} break;
         case GCSsweepend: {
+			debug_print_gcinfo(L, "GCSsweepend");
 			makewhite(g->mainthread);
             g->GCmemtrav = 0;
             g->gcstate = GCSsweepfin;
             return 0;
         } break;
 		case GCSsweepfin: {
+			debug_print_gcinfo(L, "GCSsweepfin");
+
 			if (G(L)->tobefnz) {
 				int i = runafewfinalizers(L);
 				return i * GCPEROBJCOST;

@@ -34,6 +34,8 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include <math.h>
 #include <stdint.h>
 
+#define PRINT_DEBUG_LOG_ON 1
+
 #if defined(LLONG_MAX) 
 #define LUA_INTEGER long long
 #define LUA_NUMBER double
