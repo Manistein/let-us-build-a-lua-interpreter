@@ -130,7 +130,6 @@ UpVal* luaF_findupval(struct lua_State* L, LClosure* cl, int upval_index) {
 	UpVal* prev = NULL;
 	while (openval != NULL && openval->v >= level) {
 		if (openval->v == level) {
-			openval->refcount++;
 			return openval;
 		}
 
@@ -140,7 +139,7 @@ UpVal* luaF_findupval(struct lua_State* L, LClosure* cl, int upval_index) {
 
 	UpVal* new_upval = luaM_realloc(L, NULL, 0, sizeof(UpVal));
 	new_upval->u.open.next = openval;
-	new_upval->refcount = 1;
+	new_upval->refcount = 0;
 	new_upval->v = level;
 
 	if (prev)

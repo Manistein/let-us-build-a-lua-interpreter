@@ -19,8 +19,8 @@ const.KEY_EVENT = {
 }
 
 const.BOX_SIZE = {
-	WIDTH = 38,
-	HEIGHT = 38,
+	WIDTH = 30,
+	HEIGHT = 30,
 }
 
 const.BOARD_SIZE = {

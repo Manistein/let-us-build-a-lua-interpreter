@@ -679,8 +679,9 @@ static void op_closure(struct lua_State* L, LClosure* cl, StkId ra, Instruction 
 			new_cl->upvals[i] = found;
 		}
 		else {
-			new_cl->upvals[i] = cl->upvals[i];
+			new_cl->upvals[i] = cl->upvals[up->idx];
 		}
+		new_cl->upvals[i]->refcount++;
 	}
 }
 

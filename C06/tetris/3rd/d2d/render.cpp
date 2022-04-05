@@ -81,7 +81,7 @@ int render_init(HWND hwnd) {
 	}
 
 	const WCHAR msc_fontName[] = L"Verdana";
-	const FLOAT msc_fontSize = 24;
+	const FLOAT msc_fontSize = 18;
 	// Create a DirectWrite text format object.
 	hr = g_write_factory->CreateTextFormat(
 		msc_fontName,

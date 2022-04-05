@@ -51,7 +51,7 @@ function blockmgr:reset()
 end
 
 function blockmgr:draw()
-	render.draw_text(740, 0, "next block:")
+	render.draw_text(650, 0, "next block:")
 	self.board:draw()
 	self.current_shape:draw()
 	self.next_shape:draw()
