@@ -62,6 +62,7 @@ static int newupvalues(FuncState* fs, expdesc* e, TString* n) {
 	p->upvalues[fs->nups].idx = e->u.info;
 	p->upvalues[fs->nups].in_stack = e->k == VLOCAL;
 	p->upvalues[fs->nups].name = n;
+	luaC_objbarrier(L, p, n);
 
 	return fs->nups++;
 }
@@ -729,6 +730,7 @@ static void new_localvar(struct lua_State* L, LexState* ls, TString* varname) {
 		fs->p->locvars[i].varname = NULL;
 	}
 	fs->p->locvars[fs->nlocvars].varname = varname;
+	luaC_objbarrier(L, fs->p, varname);
 	
 	luaM_growvector(L, ls->dyd->actvar.arr, ls->dyd->actvar.n + 1, ls->dyd->actvar.size, short, INT_MAX);
 	ls->dyd->actvar.arr[ls->dyd->actvar.n++] = fs->nlocvars;
@@ -982,6 +984,7 @@ static void funcbody(struct lua_State* L, LexState* ls, expdesc* e, int is_metho
 		ls->fs->p->p[i] = NULL;
 	}
 	ls->fs->p->p[ls->fs->np] = new_fs.p;
+	luaC_objbarrier(ls->L, ls->fs->p, new_fs.p);
 
 	e->k = VNONRELOC;
 	luaK_codeABx(ls->fs, OP_CLOSURE, ls->fs->freereg, ls->fs->np);

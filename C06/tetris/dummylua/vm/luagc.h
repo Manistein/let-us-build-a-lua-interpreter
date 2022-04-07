@@ -100,16 +100,25 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define luaC_condgc(pre, L, pos) if (G(L)->GCdebt > 0) { pre; luaC_step(L); pos; } 
 #define luaC_checkgc(L) luaC_condgc((void)0, L, (void)0)
 
-#define luaC_barrierback(L, t, o) \
-    (isblack(t) && iscollectable(o) && iswhite(gcvalue(o))) ? luaC_barrierback_(L, t, o) : cast(void, 0)
+#define luaC_barrier(L, p, v) \
+	(iscollectable(v) && isblack(p) && iswhite(gcvalue(v))) ? luaC_barrier_(L, obj2gco(p), gcvalue(v)) : cast(void, 0)
+
+#define luaC_barrierback(L, t, v) \
+    (isblack(t) && iscollectable(v) && iswhite(gcvalue(v))) ? luaC_barrierback_(L, t, v) : cast(void, 0)
+
 #define luaC_objbarrier(L, p, o) \
-	(isblack(p) && iswhite(gcvalue(o))) ? luaC_barrier(L, p, o) : cast(void, 0)
+	(isblack(p) && iswhite(o)) ? luaC_barrier_(L, obj2gco(p), obj2gco(o)) : cast(void, 0)
+
+#define luaC_upvalbarrier(L,uv) ( \
+	(iscollectable((uv)->v) && !upisopen(uv)) ? \
+         luaC_upvalbarrier_(L,uv) : cast(void, 0))
 
 struct GCObject* luaC_newobj(struct lua_State* L, lu_byte tt_, size_t size);
 void luaC_step(struct lua_State* L);
 void luaC_fix(struct lua_State* L, struct GCObject* o); // GCObject can not collect
-void luaC_barrier(struct lua_State* L, struct Table* t, const TValue* o);
+void luaC_barrier_(struct lua_State* L, struct GCObject* p, struct GCObject* o);
 void luaC_barrierback_(struct lua_State* L, struct Table* t, const TValue* o);
+void luaC_upvalbarrier_(struct lua_State* L, UpVal* uv);
 void reallymarkobject(struct lua_State* L, struct GCObject* gc);
 void luaC_freeallobjects(struct lua_State* L);
 void luaC_checkfinalizer(struct lua_State* L, int idx);

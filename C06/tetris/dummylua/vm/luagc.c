@@ -814,10 +814,10 @@ void luaC_fix(struct lua_State* L, struct GCObject* o) {
     white2gray(o);
 }
 
-void luaC_barrier(struct lua_State* L, struct Table* t, const TValue* o) {
+void luaC_barrier_(struct lua_State* L, struct GCObject* p, struct GCObject* o) {
 	struct global_State* g = G(L);
-	lua_assert(isblack(t) && iswhite(o));
-	markvalue(L, o);
+	lua_assert(isblack(p) && iswhite(o));
+	markobject(L, o);
 }
 
 void luaC_barrierback_(struct lua_State* L, struct Table* t, const TValue* o) {
@@ -827,6 +827,13 @@ void luaC_barrierback_(struct lua_State* L, struct Table* t, const TValue* o) {
     linkgclist(t, g->grayagain);
 }
 
+void luaC_upvalbarrier_(struct lua_State* L, UpVal* uv) {
+	struct global_State* g = G(L);
+	lua_assert(!upisopen(uv));
+	if (g->gcstate <= GCSatomic) {
+		markvalue(L, uv->v);
+	}
+}
 
 void luaC_freeallobjects(struct lua_State* L) {
 	separate_tobefnz(L, 1);

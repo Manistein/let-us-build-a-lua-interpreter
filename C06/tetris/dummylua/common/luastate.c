@@ -457,18 +457,14 @@ int lua_setmetatable(struct lua_State* L, int idx) {
 		struct Table* t = gco2tbl(gcvalue(obj));
 		t->metatable = mt;
 
-		TValue o;
-		setgco(&o, obj2gco(mt));
-		luaC_objbarrier(L, t, &o);
+		luaC_objbarrier(L, t, mt);
 		luaC_checkfinalizer(L, idx);
 	} break;
 	case LUA_TUSERDATA: {
 		Udata* u = gco2u(gcvalue(obj));
 		u->metatable = mt;
 
-		TValue o;
-		setgco(&o, obj2gco(mt));
-		luaC_objbarrier(L, mt, &o);
+		luaC_objbarrier(L, u, mt);
 		luaC_checkfinalizer(L, idx);
 	} break;
 	default: {

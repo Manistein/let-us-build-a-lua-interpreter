@@ -29,7 +29,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
      (slot = (TValue*)get(L, hvalue(t), k), !ttisnil(slot)))
 
 #define luaV_gettable(L, t, k, v) { TValue* slot = NULL; \
-    if (luaV_fastget(L, t, k, luaH_get, slot)) { luaC_barrierback(L, hvalue(t), (const TValue*)slot); setobj(v, slot);  } \
+    if (luaV_fastget(L, t, k, luaH_get, slot)) { setobj(v, slot);  } \
     else luaV_finishget(L, t, (const StkId)k, v, slot); }
 
 #define luaV_fastset(L, t, k, v, get, slot) \

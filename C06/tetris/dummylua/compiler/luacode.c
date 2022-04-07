@@ -38,6 +38,7 @@ static int addk(FuncState* fs, TValue* v) {
 
 	setobj(&p->k[k], v);
 	setivalue(idx, k);
+	luaC_barrier(ls->L, p, v);
 
 	fs->nk++;
 	return k;

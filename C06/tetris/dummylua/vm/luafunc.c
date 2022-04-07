@@ -169,8 +169,7 @@ void luaF_close(struct lua_State* L, LClosure* cl) {
 			setobj(&current->u.value, current->v);
 			current->v = &current->u.value;
 
-			if (G(L)->gcstate <= GCSatomic)
-				markvalue(L, current->v);
+			luaC_upvalbarrier(L, current);
 		}
 	}
 

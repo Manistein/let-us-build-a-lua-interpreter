@@ -516,7 +516,9 @@ static void op_loadnil(struct lua_State* L, LClosure* cl, StkId ra, Instruction 
 }
 
 static void op_setupval(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
-	setobj(cl->upvals[GET_ARG_B(i)]->v, ra);
+	UpVal* uv = cl->upvals[GET_ARG_B(i)];
+	setobj(uv->v, ra);
+	luaC_upvalbarrier(L, uv);
 }
 
 static void op_settabup(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
@@ -555,7 +557,9 @@ static void op_setlist(struct lua_State* L, LClosure* cl, StkId ra, Instruction 
 
 	int base = (c - 1) * LFIELD_PER_FLUSH;
 	for (int i = 1; i <= count; i++) {
-		luaH_setint(L, t, base + i, ra + i);
+		TValue* val = ra + i;
+		luaH_setint(L, t, base + i, val);
+		luaC_barrierback(L, t, val);
 	}
 }
 
