@@ -527,8 +527,12 @@ static void op_settabup(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 		luaG_runerror(L, "%s", "op_settabup: upval is not table");
 	}
 	struct Table* t = gco2tbl(gcvalue(upval));
-	TValue* v = luaH_set(L, t, RK(L, cl, GET_ARG_B(i)));
-	setobj(v, RK(L, cl, GET_ARG_C(i)));
+	TValue* key = RK(L, cl, GET_ARG_B(i));
+	TValue* value = RK(L, cl, GET_ARG_C(i));
+
+	TValue* slot = luaH_set(L, t, key);
+	setobj(slot, value);
+	luaC_barrierback(L, t, slot);
 }
 
 static void op_newtable(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
