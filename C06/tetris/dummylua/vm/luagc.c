@@ -822,7 +822,7 @@ void luaC_barrier_(struct lua_State* L, struct GCObject* p, struct GCObject* o) 
 
 void luaC_barrierback_(struct lua_State* L, struct Table* t, const TValue* o) {
     struct global_State* g = G(L);
-    lua_assert(isblack(t) && iswhite(o));
+    lua_assert(isblack(t) && iswhite(gcvalue(o)));
     black2gray(t);
     linkgclist(t, g->grayagain);
 }

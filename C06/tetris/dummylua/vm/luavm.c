@@ -46,7 +46,8 @@ void luaV_finishget(struct lua_State* L, TValue* t, const StkId key, StkId val, 
 				return;
 			}
 
-			tm = (TValue*)luaH_getstr(L, hvalue(t)->metatable, G(L)->tmnames[TM_INDEX]);
+			struct Table* mt = hvalue(t)->metatable;
+			tm = (TValue*)luaH_getstr(L, mt, G(L)->tmnames[TM_INDEX]);
 			if (ttisnil(tm)) {
 				setnilvalue(val);
 				return;
@@ -527,12 +528,16 @@ static void op_settabup(struct lua_State* L, LClosure* cl, StkId ra, Instruction
 		luaG_runerror(L, "%s", "op_settabup: upval is not table");
 	}
 	struct Table* t = gco2tbl(gcvalue(upval));
+
+
 	TValue* key = RK(L, cl, GET_ARG_B(i));
 	TValue* value = RK(L, cl, GET_ARG_C(i));
 
-	TValue* slot = luaH_set(L, t, key);
+	/*TValue* slot = luaH_set(L, t, key);
 	setobj(slot, value);
-	luaC_barrierback(L, t, slot);
+	luaC_barrierback(L, t, slot);*/
+
+	luaV_settable(L, upval, key, value);
 }
 
 static void op_newtable(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {

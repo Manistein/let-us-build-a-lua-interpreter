@@ -68,8 +68,9 @@ static int newupvalues(FuncState* fs, expdesc* e, TString* n) {
 }
 
 static void open_func(LexState* ls, FuncState* fs) {
-	fs->bl = NULL;
+	Proto* f = NULL;
 
+	fs->bl = NULL;
 	fs->firstlocal = ls->dyd->actvar.n;
 	fs->freereg = 0;
 	fs->ls = ls;
@@ -82,6 +83,10 @@ static void open_func(LexState* ls, FuncState* fs) {
 	fs->jpc = NO_JUMP;
 	ls->fs = fs;
 	ls->lookahead.token = TK_EOS;
+
+	f = fs->p;
+	f->source = ls->source;
+	luaC_objbarrier(ls->L, f, f->source);
 	
 	fs->pc = 0;
 }
@@ -941,7 +946,6 @@ static void funcbody(struct lua_State* L, LexState* ls, expdesc* e, int is_metho
 
 	FuncState new_fs;
 	new_fs.p = luaF_newproto(L);
-	new_fs.p->source = ls->source;
 	open_func(ls, &new_fs);
 
 	expdesc e2;
@@ -1195,6 +1199,7 @@ static void mainfunc(struct lua_State* L, LexState* ls, FuncState* fs) {
 	BlockCnt bl;
 	open_func(ls, fs);
 	newupvalues(fs, &e, fs->ls->env);
+	luaC_objbarrier(L, fs->p, fs->ls->env);
 
 	luaX_next(L, ls);
 	enterblock(L, ls, &bl, 0);
@@ -1273,6 +1278,7 @@ LClosure* luaY_parser(struct lua_State* L, Zio* zio, MBuffer* buffer, Dyndata* d
 	
 	LClosure* closure = luaF_newLclosure(L, 1);
 	closure->p = fs.p = luaF_newproto(L);
+	luaC_objbarrier(L, closure, closure->p);
 	closure->p->source = ls.source;
 
 	setlclvalue(L->top, closure);
