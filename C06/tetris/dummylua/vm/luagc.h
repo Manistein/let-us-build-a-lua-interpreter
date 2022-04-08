@@ -24,7 +24,6 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #include "../common/luastate.h"
 
 // GCState
-#define GCSpause        0
 #define GCSpropagate    1
 #define GCSatomic       2
 #define GCSinsideatomic 3
@@ -33,6 +32,7 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 #define GCSsweeptobefnz 6
 #define GCSsweepfin     7
 #define GCSsweepend     8
+#define GCSpause        9
 
 // Color
 #define WHITE0BIT       0
