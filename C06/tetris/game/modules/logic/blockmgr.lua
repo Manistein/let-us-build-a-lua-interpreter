@@ -25,9 +25,9 @@ function blockmgr:next_turn()
 		self.current_shape = self.next_shape
 	else
 		self.current_shape = self:create_block()
+		self.current_shape:random_rotate()
 	end
 	self.current_shape:update_center(5, 1)
-	self.current_shape:random_rotate()
 
 	self.next_shape = self:create_block()
 	self.next_shape:update_center(14, 6)
