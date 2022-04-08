@@ -38,13 +38,51 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 	(o)->marked &= cast(lu_byte, ~(bitmask(BLACKBIT) | WHITEBITS)); \
 	(o)->marked |= luaC_white(g)
 
-static debug_print_gcinfo(struct lua_State* L, const char* state) {
+static void debug_print_gcinfo(struct lua_State* L, const char* state) {
 #ifdef PRINT_DEBUG_LOG_ON
 	FILE* handle = fopen("./gcstate.txt", "ab+");
 	fprintf(handle, "gcstate:%s\n", state);
 	fflush(handle);
 	fclose(handle);
 #endif
+}
+
+static int GC_CYCLE = 0;
+
+static void print_TValue(const TValue* v, FILE* handle) {
+	switch (v->tt_)
+	{
+	case LUA_NUMINT: {
+		fprintf(handle, "%lld ", v->value_.i);
+	} break;
+	case LUA_NUMFLT: {
+		fprintf(handle, "%.14g ", v->value_.n);
+	} break;
+	case LUA_SHRSTR: case LUA_LNGSTR: {
+		TString* ts = gco2ts(gcvalue(v));
+		fprintf(handle, "%s ", getstr(ts));
+	} break;
+	case LUA_TBOOLEAN: {
+		fprintf(handle, "%s ", v->value_.b ? "true" : "false");
+	} break;
+	default:
+		break;
+	}
+
+	fprintf(handle, "  ");
+}
+
+static void debug_print_flow(struct lua_State* L, struct Proto* f, const char* txt) {
+	debug_print_gcinfo(L, txt);
+
+	for (int i = 0; i < f->sizek; i++) {
+		if (ttisshrstr(&f->k[i]) || ttislngstr(&f->k[i])) {
+			char temp_buff[256] = { 0 };
+			sprintf(temp_buff, "[%s] ", getstr(gco2ts(gcvalue(&f->k[i]))));
+
+			debug_print_gcinfo(L, temp_buff);
+		}
+	}
 }
 
 struct GCObject* luaC_newobj(struct lua_State* L, lu_byte tt_, size_t size) {
@@ -77,7 +115,8 @@ void reallymarkobject(struct lua_State* L, struct GCObject* gco) {
 			linkgclist(gco2cclosure(gco), g->gray);
 		} break;
 		case LUA_TPROTO:{
-			linkgclist(gco2proto(gco), g->gray);
+			struct Proto* f = gco2proto(gco);
+			linkgclist(f, g->gray);
 		} break;
         case LUA_SHRSTR:{ 
             gray2black(gco);
@@ -130,6 +169,8 @@ static void restart_collection(struct lua_State* L) {
 	g->allweak = g->weak = g->ephemeron = NULL;
     markobject(L, g->mainthread); 
     markvalue(L, &g->l_registry);
+
+	GC_CYCLE++;
 }
 
 static lu_mem traverse_thread(struct lua_State* L, struct lua_State* th) {
@@ -247,6 +288,8 @@ static lu_mem traverse_strong_table(struct lua_State* L, struct Table* t) {
         markvalue(L, &t->array[i]); 
     }
 
+	FILE* fhandle = fopen("./traverse_strong_table.txt", "ab+");
+	fprintf(fhandle, "%s addr:%x color:%d GC cycle:%d %s", "------------traverse_strong_table", cast(int, t), t->marked, GC_CYCLE, "---------------\n");
     for (int i = 0; (i < twoto(t->lsizenode)) && !isdummy(t); i++) {
         Node* n = getnode(t, i);
         if (ttisnil(getval(n))) {
@@ -256,8 +299,19 @@ static lu_mem traverse_strong_table(struct lua_State* L, struct Table* t) {
         else {
             markvalue(L, getwkey(n));
             markvalue(L, getval(n));
+
+			print_TValue(getwkey(n), fhandle);
+
+			TValue* test_v = getval(n);
+			if (iscollectable(test_v)) {
+				fprintf(fhandle, "addr:%x ", cast(int, test_v->value_.gc));
+				fprintf(fhandle, "color:%d", test_v->value_.gc->marked);
+			}
+			fprintf(fhandle, "\n");
         }
     }
+	fflush(fhandle);
+	fclose(fhandle);
 
     return sizeof(struct Table) + sizeof(TValue) * t->arraysize + sizeof(Node) * twoto(t->lsizenode);
 }
@@ -354,6 +408,11 @@ static void propagatemark(struct lua_State* L) {
     struct GCObject* gco = g->gray;
     gray2black(gco);
     lu_mem size = 0;
+
+	FILE* fhandle = fopen("./traverse_strong_table.txt", "ab+");
+	fprintf(fhandle, ">>>>>>>>>>>>>>gray2black %x\n", gco);
+	fflush(fhandle);
+	fclose(fhandle);
 
     switch(gco->tt_) {
         case LUA_TTHREAD:{
@@ -626,6 +685,9 @@ static lu_mem freeobj(struct lua_State* L, struct GCObject* gco) {
 		case LUA_TPROTO: {
 			struct Proto* f = gco2proto(gco);
 			lu_mem sz = luaF_sizeproto(L, f);
+
+			debug_print_flow(L, f, "---gc freeobj---");
+
 			luaF_freeproto(L, f);
 			return sz;
 		} break;

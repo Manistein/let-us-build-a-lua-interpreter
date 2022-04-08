@@ -375,7 +375,7 @@ static void init_upval(struct lua_State* L) {
 		struct Table* t = gco2tbl(gcvalue(&G(L)->l_registry));
 		TValue* _G = &t->array[LUA_GLOBALTBLIDX];
 		cl->upvals[0]->v = _G;
-		// setobj(cl->upvals[0]->v, _G);
+		luaC_upvalbarrier(L, cl->upvals[0]);
 	}
 }
 
