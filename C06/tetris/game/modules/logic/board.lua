@@ -55,6 +55,8 @@ function board:erase(row)
 end
 
 function board:try_erase()
+	local erase_count = 0
+
 	for row = 1, const.BOARD_SIZE.Y do 
 		local occupy_count = 0
 		for col = 1, const.BOARD_SIZE.X do 
@@ -66,8 +68,11 @@ function board:try_erase()
 
 		if occupy_count >= const.BOARD_SIZE.X then 
 			self:erase(row)
+			erase_count = erase_count + 1
 		end 
 	end 
+
+	return erase_count
 end
 
 function board:occupy(x, y, vertexes, color)
@@ -80,7 +85,7 @@ function board:occupy(x, y, vertexes, color)
 		grid.color = color
 	end
 
-	self:try_erase()
+	return self:try_erase()
 end
 
 function board:can_occupy(x, y, vertexes)

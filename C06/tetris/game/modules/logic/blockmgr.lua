@@ -61,7 +61,7 @@ function blockmgr:draw()
 	self.next_shape:draw()
 end
 
-function blockmgr:key_event(event)
+function blockmgr:key_event(event, for_ui_data)
 	local center_x, center_y = self.current_shape:get_center()
 	local vertexes = self.current_shape:get_vertexes()
 	local boarder_pos = self.current_shape:get_border_pos(vertexes)
@@ -89,7 +89,8 @@ function blockmgr:key_event(event)
 		end
 	end
 
-	self:try_occupy()
+	local erase_count = self:try_occupy()
+	for_ui_data.erase_count = for_ui_data.erase_count + erase_count
 end
 
 function blockmgr:try_occupy()
@@ -97,15 +98,21 @@ function blockmgr:try_occupy()
 	local vertexes = self.current_shape:get_local_pos()
 
 	if self.board:can_occupy(center.x, center.y, vertexes) then 
-		self.board:occupy(center.x, center.y, vertexes, self.current_shape:get_color())
+		local erase_count = self.board:occupy(center.x, center.y, vertexes, self.current_shape:get_color())
 		self:next_turn()
-	end
+
+		return erase_count
+	else
+		return 0
+	end	
 end
 
-function blockmgr:update(delta)
+function blockmgr:update(delta, for_ui_data)
 	if duration >= downward_gap_by_millisecond then 
 		self.current_shape:move_down(1)
-		self:try_occupy()
+		local erase_count = self:try_occupy()
+
+		for_ui_data.erase_count = for_ui_data.erase_count + erase_count
 		duration = 0
 	end
 	duration = duration + delta

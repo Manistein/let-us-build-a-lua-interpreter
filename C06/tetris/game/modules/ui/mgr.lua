@@ -18,7 +18,6 @@ end
 
 function uimgr:update_score(v)
 	self.score:set_score(v)
-	render.log("uimgr.update_score " .. tostring(v))
 end
 
 function uimgr:draw()

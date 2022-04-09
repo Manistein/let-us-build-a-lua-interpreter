@@ -15,7 +15,7 @@ function score:reset()
 end
 
 function score:set_score(v)
-	self.value = self.value + v
+	self.value = v
 end
 
 function score:draw()
