@@ -48,8 +48,8 @@ function base:update_center(x, y)
 	self.center_y = y
 end
 
-function base:get_border_pos()
-	local vertex = self.vertexes[1]
+function base:get_border_pos(vertexes)
+	local vertex = vertexes[1]
 
 	local ret = {}
 	ret.left_most_x = vertex.x
@@ -57,7 +57,7 @@ function base:get_border_pos()
 	ret.top_most_y = vertex.y 
 	ret.down_most_y = vertex.y
 
-	for idx, v in ipairs(self.vertexes) do 
+	for idx, v in ipairs(vertexes) do 
 		if v.x < ret.left_most_x then 
 			ret.left_most_x = v.x
 		end 
@@ -104,28 +104,13 @@ function base:get_center_world_pos()
 	return ret 
 end
 
-function base:move_left(x)
-	local pos = self.center_x - x 
-	local ret = self:get_border_pos()
-	local lmost = ret.left_most_x + pos 
-	if lmost > 0 then 
-		self.center_x = pos 
-	end
-end
-
-function base:move_right(x)
-	local pos = self.center_x + x
-	local ret = self:get_border_pos()
-
-	local rmost = ret.right_most_x + pos
-	if rmost <= const.BOARD_SIZE.X then 
-		self.center_x = pos
-	end  
+function base:get_center()
+	return self.center_x, self.center_y
 end
 
 function base:move_down(y)
 	local pos = self.center_y + y
-	local ret = self:get_border_pos()
+	local ret = self:get_border_pos(self.vertexes)
 	local upmost = ret.top_most_y + pos
 
 	if upmost <= const.BOARD_SIZE.Y then
@@ -145,14 +130,29 @@ function base:try_flip()
 	end
 end
 
-function base:rotate90()
+function base:gen_rotate90_vertexes()
+	local ret = {}
 	for idx, v in ipairs(self.vertexes) do 
 		local rotate_x = v.y 
 		local rotate_y = -v.x
 
-		self.vertexes[idx].x = rotate_x
-		self.vertexes[idx].y = rotate_y
+		ret[idx] = {}
+		ret[idx].x = rotate_x
+		ret[idx].y = rotate_y
 	end
+	return ret
+end
+
+function base:rotate90()
+	self.vertexes = self:gen_rotate90_vertexes()
+end
+
+function base:set_vertexes(vertexes)
+	self.vertexes = vertexes
+end
+
+function base:get_vertexes()
+	return self.vertexes
 end
 
 return base

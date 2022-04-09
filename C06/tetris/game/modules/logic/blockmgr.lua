@@ -62,28 +62,40 @@ function blockmgr:draw()
 end
 
 function blockmgr:key_event(event)
+	local center_x, center_y = self.current_shape:get_center()
+	local vertexes = self.current_shape:get_vertexes()
+	local boarder_pos = self.current_shape:get_border_pos(vertexes)
+	local is_rotate = false
+
 	if event == const.KEY_EVENT.MOVE_LEFT then 
-		self.current_shape:move_left(1)
+		center_x = center_x - 1
 	elseif event == const.KEY_EVENT.MOVE_RIGHT then 
-		self.current_shape:move_right(1)
+		center_x = center_x + 1
 	elseif event == const.KEY_EVENT.MOVE_UP then 
-		-- self.current_shape:rotate90()
+		vertexes = self.current_shape:gen_rotate90_vertexes()
+		boarder_pos = self.current_shape:get_border_pos(vertexes)
+		is_rotate = true
 	elseif event == const.KEY_EVENT.MOVE_DOWN then 
-		self.current_shape:move_down(1)
+		center_y = center_y + 1
 	end	
+
+	local center = self.board:try_fix(center_x, center_y, vertexes, boarder_pos)
+	if center then 
+		render.log(tostring(center.x) .. " " .. tostring(center.y))
+		self.current_shape:update_center(center.x, center.y)
+		if is_rotate then 
+			self.current_shape:set_vertexes(vertexes)
+		end
+	end
 
 	self:try_occupy()
 end
 
-local count = 0
 function blockmgr:try_occupy()
 	local center = self.current_shape:get_center_world_pos()
 	local vertexes = self.current_shape:get_local_pos()
 
-	count = count + 1
-	render.log("blockmgr:try_occupy " .. tostring(count))
 	if self.board:can_occupy(center.x, center.y, vertexes) then 
-		render.log("blockmgr:try_occupy is true")
 		self.board:occupy(center.x, center.y, vertexes, self.current_shape:get_color())
 		self:next_turn()
 	end

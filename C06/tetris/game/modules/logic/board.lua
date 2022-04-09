@@ -62,7 +62,7 @@ function board:can_occupy(x, y, vertexes)
 		end 
 
 		local grid = self.grids[gx][gy + 1]
-		if grid.is_occupied then 
+		if grid and grid.is_occupied then 
 			ret = true 
 			break
 		end
@@ -77,7 +77,6 @@ function board:can_fix(x, y, vertexes)
 	for idx, v in ipairs(vertexes) do 
 		local gx = x + v.x 
 		local gy = y + v.y 
-		local grid = self.grids[gx][gy]
 
 		if gx <= 0 or gx > const.BOARD_SIZE.X then
 			ret = false
@@ -89,7 +88,8 @@ function board:can_fix(x, y, vertexes)
 			break
 		end
 
-		if grid.is_occupied then 
+		local grid = self.grids[gx][gy]
+		if grid and grid.is_occupied then 
 			ret = false
 			break
 		end
@@ -105,9 +105,9 @@ function board:try_fix(x, y, vertexes, board_pos)
 
 	local max_move_times = -board_pos.left_most_x
 	local shift_right = -1 
-	for i = 1, max_move_times do 
-		if self:can_fix(x, y, vertexes) then
-			shift_right = i - 1
+	for i = 0, max_move_times do 
+		if self:can_fix(x + i, y, vertexes) then
+			shift_right = i
 			break
 		end
 	end 
@@ -118,10 +118,10 @@ function board:try_fix(x, y, vertexes, board_pos)
 	end 
 
 	max_move_times = board_pos.right_most_x
-	local shift_left = -1
-	for i = 1, max_move_times do 
-		if self:can_fix(x, y, vertexes) then 
-			shift_left = i - 1
+	local shift_left = -1 
+	for i = 0, max_move_times do 
+		if self:can_fix(x - i, y, vertexes) then 
+			shift_left = i
 			break
 		end
 	end 
