@@ -121,19 +121,22 @@ function blockmgr:try_occupy()
 			self:next_turn()
 		end 
 
-		return erase_count
+		return erase_count, true
 	else
-		return 0
+		return 0, false
 	end	
 end
 
 function blockmgr:run_game(delta, for_ui_data)
 	if duration >= self.downward_gap_by_millisecond then 
-		local erase_count = self:try_occupy()
+		local erase_count, can_occupy = self:try_occupy()
 
 		if self.game_status == const.GAME_STATUS.RUNNING then  
 			for_ui_data.erase_count = for_ui_data.erase_count + erase_count
-			self.current_shape:move_down(1)
+
+			if not can_occupy then 
+				self.current_shape:move_down(1)
+			end
 		end
 
 		duration = 0
