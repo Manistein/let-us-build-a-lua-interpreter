@@ -79,6 +79,10 @@ function board:occupy(x, y, vertexes, color)
 	for idx, v in ipairs(vertexes) do 
 		local gx = v.x + x 
 		local gy = v.y + y
+		-- game over 
+		if gy <= 0 then 
+			return -1
+		end
 
 		local grid = self.grids[gx][gy]
 		grid.is_occupied = true 

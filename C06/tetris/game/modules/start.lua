@@ -66,6 +66,7 @@ function __key_enter__()
 end
 
 function __key_space__()
+	controller:toggle_pause()
 	render.log("start|key space press")
 end
 

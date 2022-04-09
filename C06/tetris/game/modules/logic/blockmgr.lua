@@ -15,6 +15,7 @@ local blockmgr = object:inherit()
 
 function blockmgr:init()
 	self.board = board_class:new()
+	self.game_status = const.GAME_STATUS.RUNNING
 
 	self:next_turn()	
 	render.log("blockmgr|init|success")
@@ -27,11 +28,15 @@ function blockmgr:next_turn()
 		self.current_shape = self:create_block()
 		self.current_shape:random_rotate()
 	end
-	self.current_shape:update_center(5, 1)
+	self.current_shape:update_center(5, -1)
 
 	self.next_shape = self:create_block()
 	self.next_shape:update_center(14, 6)
 	self.next_shape:random_rotate()
+end
+
+function blockmgr:set_game_status(status)
+	self.game_status = status
 end
 
 function blockmgr:create_block()
@@ -52,16 +57,21 @@ end
 function blockmgr:reset()
 	self.board:reset()
 	self:next_turn()
+	self.game_status = const.GAME_STATUS.RUNNING
 end
 
 function blockmgr:draw()
-	render.draw_text(650, 0, "next block:")
+	render.draw_text(630, 0, "next block:")
 	self.board:draw()
 	self.current_shape:draw()
 	self.next_shape:draw()
 end
 
 function blockmgr:key_event(event, for_ui_data)
+	if self.game_status ~= const.GAME_STATUS.RUNNING then
+		return 
+	end
+
 	local center_x, center_y = self.current_shape:get_center()
 	local vertexes = self.current_shape:get_vertexes()
 	local boarder_pos = self.current_shape:get_border_pos(vertexes)
@@ -90,7 +100,9 @@ function blockmgr:key_event(event, for_ui_data)
 	end
 
 	local erase_count = self:try_occupy()
-	for_ui_data.erase_count = for_ui_data.erase_count + erase_count
+	if erase_count >= 0 then 
+		for_ui_data.erase_count = for_ui_data.erase_count + erase_count
+	end
 end
 
 function blockmgr:try_occupy()
@@ -107,15 +119,31 @@ function blockmgr:try_occupy()
 	end	
 end
 
-function blockmgr:update(delta, for_ui_data)
+function blockmgr:run_game(delta, for_ui_data)
 	if duration >= downward_gap_by_millisecond then 
-		self.current_shape:move_down(1)
 		local erase_count = self:try_occupy()
+		if erase_count == -1 then  -- game over
+			self.game_status = const.GAME_STATUS.GAME_OVER
+		else 
+			for_ui_data.erase_count = for_ui_data.erase_count + erase_count
+		end
 
-		for_ui_data.erase_count = for_ui_data.erase_count + erase_count
+		self.current_shape:move_down(1)
 		duration = 0
 	end
 	duration = duration + delta
+end
+
+function blockmgr:update(delta, for_ui_data)
+	if self.game_status == const.GAME_STATUS.RUNNING then 
+		self:run_game(delta, for_ui_data)
+	end
+
+	return self.game_status
+end
+
+function blockmgr:get_game_status()
+	return self.game_status
 end
 
 return blockmgr

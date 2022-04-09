@@ -94,6 +94,7 @@ int logic_key_esc_press() {
 	lua_getglobal(L, "__escape__");
 	check(luaL_pcall(L, 0, 0));
 
+	exit(0);
 	return 1;
 }
 
