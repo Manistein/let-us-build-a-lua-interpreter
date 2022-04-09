@@ -23,6 +23,10 @@ function uimgr:update_score(v)
 	self.score:set_score(v)
 end
 
+function uimgr:get_downward_gap()
+	return self.score:get_downward_gap()
+end
+
 function uimgr:draw()
 	self.score:draw()
 	self.tips:draw()

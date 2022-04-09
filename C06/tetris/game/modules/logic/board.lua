@@ -75,22 +75,6 @@ function board:try_erase()
 	return erase_count
 end
 
-function board:can_born(center_x, center_y, vertexes)
-	local ret = true
-
-	for idx, v in ipairs(vertexes) do 
-		local gx = center_x + v.x 
-		local gy = center_y + v.y 
-		local grid = self.grids[gx][gy]
-		if grid and grid.is_occupied then 
-			ret = false
-			break 
-		end
-	end 
-
-	return ret 
-end
-
 function board:occupy(x, y, vertexes, color)
 	for idx, v in ipairs(vertexes) do 
 		local gx = v.x + x 

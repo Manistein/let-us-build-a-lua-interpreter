@@ -8,7 +8,7 @@ local tshape_class = require("modules.logic.block.tshape")
 local zshape_class = require("modules.logic.block.zshape")
 local const = require("modules.const")
 
-local downward_gap_by_millisecond = 1000 
+local default_downward_gap = 1000 
 local duration = 0
 
 local blockmgr = object:inherit()
@@ -16,6 +16,7 @@ local blockmgr = object:inherit()
 function blockmgr:init()
 	self.board = board_class:new()
 	self.game_status = const.GAME_STATUS.RUNNING
+	self.downward_gap_by_millisecond = default_downward_gap 
 
 	self:next_turn()	
 	render.log("blockmgr|init|success")
@@ -60,16 +61,13 @@ function blockmgr:reset()
 	self.board:reset()
 	self:next_turn()
 	self.game_status = const.GAME_STATUS.RUNNING
+	self.downward_gap_by_millisecond = default_downward_gap 
 end
 
 function blockmgr:draw()
 	render.draw_text(630, 0, "next block:")
 	self.board:draw()
-
-	if self.current_shape then 
-		self.current_shape:draw()
-	end
-
+	self.current_shape:draw()
 	self.next_shape:draw()
 end
 
@@ -130,7 +128,7 @@ function blockmgr:try_occupy()
 end
 
 function blockmgr:run_game(delta, for_ui_data)
-	if duration >= downward_gap_by_millisecond then 
+	if duration >= self.downward_gap_by_millisecond then 
 		local erase_count = self:try_occupy()
 
 		if self.game_status == const.GAME_STATUS.RUNNING then  
@@ -153,6 +151,10 @@ end
 
 function blockmgr:get_game_status()
 	return self.game_status
+end
+
+function blockmgr:set_downward_gap(v)
+	self.downward_gap_by_millisecond = v
 end
 
 return blockmgr

@@ -33,6 +33,7 @@ function controller:update(delta)
 
 	self.uimgr:set_game_status(game_status)
 	self.uimgr:update_score(self.for_ui_data.erase_count * const.BOARD_SIZE.X)
+	self.blockmgr:set_downward_gap(self.uimgr:get_downward_gap())
 
 	render.begin_draw()
 	self.blockmgr:draw()
