@@ -38,6 +38,38 @@ function board:draw()
 	end 	
 end
 
+function board:erase(row) 
+	if row <= 0 then
+		return 
+	end 
+
+	for i = row, 2, -1 do 
+		for j = 1, const.BOARD_SIZE.X do 
+			self.grids[j][i].is_occupied = self.grids[j][i - 1].is_occupied
+			self.grids[j][i].color = self.grids[j][i - 1].color
+
+			self.grids[j][i - 1].is_occupied = false
+			self.grids[j][i - 1].color = 0
+		end
+	end
+end
+
+function board:try_erase()
+	for row = 1, const.BOARD_SIZE.Y do 
+		local occupy_count = 0
+		for col = 1, const.BOARD_SIZE.X do 
+			local grid = self.grids[col][row]
+			if grid and grid.is_occupied then 
+				occupy_count = occupy_count + 1
+			end
+		end 
+
+		if occupy_count >= const.BOARD_SIZE.X then 
+			self:erase(row)
+		end 
+	end 
+end
+
 function board:occupy(x, y, vertexes, color)
 	for idx, v in ipairs(vertexes) do 
 		local gx = v.x + x 
@@ -47,6 +79,8 @@ function board:occupy(x, y, vertexes, color)
 		grid.is_occupied = true 
 		grid.color = color
 	end
+
+	self:try_erase()
 end
 
 function board:can_occupy(x, y, vertexes)
