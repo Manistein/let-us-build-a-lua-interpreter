@@ -72,16 +72,17 @@ function blockmgr:key_event(event)
 	elseif event == const.KEY_EVENT.MOVE_RIGHT then 
 		center_x = center_x + 1
 	elseif event == const.KEY_EVENT.MOVE_UP then 
-		vertexes = self.current_shape:gen_rotate90_vertexes()
-		boarder_pos = self.current_shape:get_border_pos(vertexes)
-		is_rotate = true
+		if self.current_shape:get_type() ~= const.BLOCK_TYPE.SQUARE then 
+			vertexes = self.current_shape:gen_rotate90_vertexes()
+			boarder_pos = self.current_shape:get_border_pos(vertexes)
+			is_rotate = true
+		end
 	elseif event == const.KEY_EVENT.MOVE_DOWN then 
 		center_y = center_y + 1
 	end	
 
 	local center = self.board:try_fix(center_x, center_y, vertexes, boarder_pos)
 	if center then 
-		render.log(tostring(center.x) .. " " .. tostring(center.y))
 		self.current_shape:update_center(center.x, center.y)
 		if is_rotate then 
 			self.current_shape:set_vertexes(vertexes)

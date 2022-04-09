@@ -7,6 +7,7 @@ local zshape = base:inherit()
 function zshape:init()
 	base.init(self)
 	self.center_idx = 3
+	self.type = const.BLOCK_TYPE.ZSHAPE
 
 	if self:try_flip() then 
 		self.vertexes = { 

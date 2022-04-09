@@ -8,6 +8,7 @@ local lshape = base:inherit()
 function lshape:init()
 	base.init(self)
 	self.center_idx = 3 
+	self.type = const.BLOCK_TYPE.LSHAPE
 
 	if self:try_flip() then 
 		self.vertexes = { 

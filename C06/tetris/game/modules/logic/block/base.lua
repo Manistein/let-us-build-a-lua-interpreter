@@ -14,6 +14,10 @@ function base:init()
 	self.center_idx = 0
 end
 
+function base:get_type()
+	return self.type
+end
+
 function base:get_color()
 	return self.color
 end

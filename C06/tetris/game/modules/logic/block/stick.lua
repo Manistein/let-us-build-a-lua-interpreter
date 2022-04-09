@@ -7,6 +7,7 @@ local stick = base:inherit()
 function stick:init()
 	base.init(self)
 	self.center_idx = 3
+	self.type = const.BLOCK_TYPE.STICK
 
 	self.vertexes = { 
 		{x = 0, y = -2}, 

@@ -7,6 +7,7 @@ local square = base:inherit()
 function square:init()
 	base.init(self)
 	self.center_idx = 1 
+	self.type = const.BLOCK_TYPE.SQUARE
 
 	self.vertexes = { 
 		{x = 0, y = 0}, 
