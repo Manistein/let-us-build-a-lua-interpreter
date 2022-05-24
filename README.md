@@ -12,8 +12,8 @@
 #### linux环境下的构建流程
 * 下载：通过git clone命令，clone仓库：git clone https://github.com/Manistein/let-us-build-a-lua-interpreter.git 或通过wget指令获取压缩包：wget https://github.com/Manistein/let-us-build-a-lua-interpreter/archive/refs/heads/main.zip
 * 使用cmake构建makefile文件，比如要对C02/dummylua-2-1构建工程，那么首先需要创建目录C02/dummylua-2-1/build，通过cd命令，进入build目录。输入指令
-```
-cmake ..
-```  
-&nbsp;&nbsp;&nbsp;&nbsp;尔后会生成makefile文件，使用make指令生成可执行文件。
+  ```
+  cmake ..
+  ```  
+  尔后会生成makefile文件，使用make指令生成可执行文件。
 * 第6章的工程，不支持在非windows平台下构建和运行。
