@@ -14,5 +14,6 @@
 * 使用cmake构建makefile文件，比如要对C02/dummylua-2-1构建工程，那么首先需要创建目录C02/dummylua-2-1/build，通过cd命令，进入build目录。输入指令
 ```
 cmake ..
-```  尔后会生成makefile文件，使用make指令生成可执行文件。
+```  
+&nbsp;&nbsp;&nbsp;&nbsp;尔后会生成makefile文件，使用make指令生成可执行文件。
 * 第6章的工程，不支持在非windows平台下构建和运行。
