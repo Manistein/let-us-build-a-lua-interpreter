@@ -289,7 +289,7 @@ void p1_test_nestcall01() { // call count < LUA_MAXCALLS
     luaL_pushinteger(L, 1);
     luaL_pcall(L, 1, 1);
 
-    printf("p1_test_nestcall01 result = %d stack_size:%d\n", luaL_tointeger(L, -1), luaL_stacksize(L));
+    printf("p1_test_nestcall01 result = %ld stack_size:%d\n", luaL_tointeger(L, -1), luaL_stacksize(L));
     luaL_pop(L);
 
     luaL_close(L);
