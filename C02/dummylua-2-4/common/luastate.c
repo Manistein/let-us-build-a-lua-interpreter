@@ -74,7 +74,7 @@ static void init_registry(struct lua_State* L) {
 
 static unsigned int makeseed(struct lua_State* L) {
     char buff[4 * sizeof(size_t)];
-    unsigned int h = time(NULL);
+    unsigned int h = (unsigned int)time(NULL);
     int p = 0;
 
     addbuff(buff, L, p);

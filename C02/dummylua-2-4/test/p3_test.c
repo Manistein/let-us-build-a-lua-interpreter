@@ -71,8 +71,8 @@ void test_string_cache(struct lua_State* L, int is_same_str) {
 }
 
 void test_gc(struct lua_State* L) {
-   int start_time = time(NULL);
-   int end_time = time(NULL);
+   int start_time = (int)time(NULL);
+   int end_time = (int)time(NULL);
    size_t max_bytes = 0;
    struct global_State* g = G(L);
    int j = 0;
@@ -90,7 +90,7 @@ void test_gc(struct lua_State* L) {
             printf("timestamp:%d totalbytes:%f kb \n", (int)time(NULL), (float)(g->totalbytes + g->GCdebt) / 1024.0f);
         }
    }
-   end_time = time(NULL);
+   end_time = (int)time(NULL);
    printf("finish test start_time:%d end_time:%d max_bytes:%f kb \n", start_time, end_time, (float)max_bytes / 1024.0f);
 }
 

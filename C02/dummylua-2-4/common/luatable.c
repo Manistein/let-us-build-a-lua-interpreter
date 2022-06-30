@@ -256,7 +256,7 @@ int luaH_resize(struct lua_State* L, struct Table* t, unsigned int asize, unsign
         luaM_reallocvector(L, t->array, t->arraysize, asize, TValue); 
         t->arraysize = asize;
 
-        for (int i = old_asize; i < asize; i ++) {
+        for (unsigned int i = old_asize; i < asize; i ++) {
             setnilvalue(&t->array[i]);
         }
     }
@@ -271,7 +271,7 @@ int luaH_resize(struct lua_State* L, struct Table* t, unsigned int asize, unsign
 
     // shrink array
     if (asize < old_asize) {
-        for (int i = asize; i < old_asize; i++) {
+        for (unsigned int i = asize; i < old_asize; i++) {
             if (!ttisnil(&t->array[i])) {
                 luaH_setint(L, t, i + 1, &t->array[i]);
             }
@@ -280,7 +280,7 @@ int luaH_resize(struct lua_State* L, struct Table* t, unsigned int asize, unsign
         t->arraysize = asize;
     }
 
-    for (int i = 0; i < old_node_size; i++) {
+    for (unsigned int i = 0; i < old_node_size; i++) {
         Node* n = &old_node[i];
         if (!ttisnil(getval(n))) {
             setobj(luaH_set(L, t, getkey(n)), getval(n));
@@ -319,8 +319,8 @@ static Node* getlastfree(struct Table* t) {
  ***/
 static int numsarray(struct Table* t, int* nums) {
     int totaluse = 0;
-    int idx = 0;
-    for (int i = 0, twotoi = 1; twotoi <= t->arraysize; i ++, twotoi *= 2) {
+    unsigned int idx = 0;
+    for (unsigned int i = 0, twotoi = 1; twotoi <= t->arraysize; i ++, twotoi *= 2) {
         for (; idx < twotoi; idx++) {
             if (!ttisnil(&t->array[idx])) {
                 totaluse ++;
@@ -352,10 +352,10 @@ static int numshash(struct Table* t, int* nums) {
     return totaluse;
 }
 
-static int compute_array_size(struct Table* t, int* nums, int* array_used_num) {
-    int array_size = 0;
-    int sum_array_used = 0;
-    int sum_int_keys = 0;
+static unsigned int compute_array_size(struct Table* t, int* nums, int* array_used_num) {
+    unsigned int array_size = 0;
+    unsigned int sum_array_used = 0;
+    unsigned int sum_int_keys = 0;
     for (unsigned int i = 0, twotoi = 1; i < MAXABITS + 1; i++, twotoi *= 2) {
         sum_int_keys += nums[i];
         if (sum_int_keys > twotoi / 2) {
@@ -387,7 +387,7 @@ static void rehash(struct lua_State* L, struct Table* t, const TValue* key) {
             nums[temp]++;
     }
 
-    int asize = compute_array_size(t, nums, &array_used_num);
+    unsigned int asize = compute_array_size(t, nums, &array_used_num);
     luaH_resize(L, t, asize, totaluse - array_used_num);
 }
 
@@ -490,7 +490,7 @@ int luaH_next(struct lua_State* L, struct Table* t, TValue* key) {
         }
     }
     
-    for (i -= t->arraysize; i < twoto(t->lsizenode); i ++) {
+    for (i -= t->arraysize; i < (unsigned int)twoto(t->lsizenode); i ++) {
         Node* n = getnode(t, i);
         if (!ttisnil(getval(n))) {
             setobj(key, getwkey(n));
@@ -503,7 +503,7 @@ int luaH_next(struct lua_State* L, struct Table* t, TValue* key) {
 
 int luaH_getn(struct lua_State* L, struct Table* t) {
     int n = 0;
-    for (int i = 0; i < t->arraysize; i++) {
+    for (unsigned int i = 0; i < t->arraysize; i++) {
         if (!ttisnil(&t->array[i])) {
             n ++;
         }

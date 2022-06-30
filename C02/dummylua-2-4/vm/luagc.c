@@ -99,7 +99,7 @@ static lu_mem traverse_thread(struct lua_State* L, struct lua_State* th) {
 }
 
 static lu_mem traverse_strong_table(struct lua_State* L, struct Table* t) {
-    for (int i = 0; i < t->arraysize; i++) {
+    for (unsigned int i = 0; i < t->arraysize; i++) {
         markvalue(L, &t->array[i]); 
     }
 
