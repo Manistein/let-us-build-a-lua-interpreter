@@ -3,7 +3,6 @@
 #include "../vm/luagc.h"
 #include "../common/luastring.h"
 #include <time.h>
-#include "../common/luaobject.h"
 
 #define ELEMENTNUM 5
 
@@ -29,7 +28,7 @@ void test_internal(struct lua_State* L, const char* str, int is_variant) {
     for (int i = 0; i < 5; i++) {
         if (is_variant && strlen(str) <= MAXSHORTSTR) {
             char buff[256] = { 0 };
-            l_sprintf(buff, sizeof(buff), "%s %d", str, i);
+            sprintf(buff, "%s %d", str, i);
             luaL_pushstring(L, buff);
         }
         else {
@@ -56,7 +55,7 @@ void test_string_cache(struct lua_State* L, int is_same_str) {
         else {
             char* buff = (char*)malloc(256);
             printf("buff addr %x \n", (unsigned int)(size_t)buff);
-            l_sprintf(buff, 256, "%s", g_lngstr);
+            sprintf(buff, "%s", g_lngstr);
             ts = luaS_new(L, buff, strlen(buff));
             free(buff);
         }

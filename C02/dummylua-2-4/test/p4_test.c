@@ -10,7 +10,7 @@ static void print_object(struct lua_State* L, TValue* o) {
             printf("nil\n");
         } break;
         case LUA_NUMINT: {
-            printf("type:int value:%d\n", o->value_.i);
+            printf("type:int value:%ld\n", o->value_.i);
         } break;
         case LUA_TBOOLEAN: {
             printf("type:boolean value:%d\n", o->value_.b);

@@ -3,7 +3,7 @@
 // test case 1
 static int test_main01(struct lua_State* L) {
     lua_Integer i = luaL_tointeger(L, -1);
-    printf("test_main01 luaL_tointeger value = %d\n", i);
+    printf("test_main01 luaL_tointeger value = %ld\n", i);
     return 0;
 }
 
@@ -21,7 +21,7 @@ static int test_main02(struct lua_State* L) {
     i++;
     luaL_pushinteger(L, i);
 
-    printf("test_main02 luaL_tointeger value = %d\n", i);
+    printf("test_main02 luaL_tointeger value = %ld\n", i);
     return 1;
 }
 
@@ -109,7 +109,7 @@ static int test_main05(struct lua_State* L) {
     lua_Number n = luaL_tonumber(L, -1);
     lua_Integer i = luaL_tointeger(L, -2);
     
-    printf("test_main05 n:%f i:%d\n", n, i);
+    printf("test_main05 n:%f i:%ld\n", n, i);
 
     luaL_pushboolean(L, true);
 
@@ -151,7 +151,7 @@ void p1_test_result06() { // nwant = 1; and nresult > 1;
     
     printf("p1_test_result06 after call stacksize:%d\n", luaL_stacksize(L));
     lua_Integer v = luaL_tointeger(L, -1);
-    printf("p1_test_result06 top value:%d\n", v);
+    printf("p1_test_result06 top value:%ld\n", v);
     luaL_pop(L);
     printf("p1_test_result06 final stacksize:%d\n", luaL_stacksize(L));
     
@@ -204,7 +204,7 @@ void p1_test_result08() { // nwant > 1; and nresult > 0;
         if (i != 0) {
             lua_Integer integer = luaL_tointeger(L, -1);
             luaL_pop(L);
-            printf("p1_test_result08 stack_idx:%d integer:%d\n", test_result08_nwant - i, integer);
+            printf("p1_test_result08 stack_idx:%d integer:%ld\n", test_result08_nwant - i, integer);
         }
         else {
             int isnil = luaL_isnil(L, -1);
@@ -255,7 +255,7 @@ void p1_test_result10() { // nwant = -1; and nresult > 0;
     for (i = 0; i < stack_size; i++) {
         lua_Integer integer = luaL_tointeger(L, -1);
         luaL_pop(L);
-        printf("stack value %d\n", integer);
+        printf("stack value %ld\n", integer);
     }
     printf("p1_test_result10 final stack_size:%d\n", luaL_stacksize(L));
 
@@ -298,3 +298,28 @@ void p1_test_nestcall01() { // call count < LUA_MAXCALLS
 void p1_test_nestcall02() { // call count >= LUA_MAXCALLS
 }
 
+void p1_test_main() {
+    printf("\n--------------------test case 1--------------------------\n");
+    p1_test_result01();
+    printf("\n--------------------test case 2--------------------------\n");
+    p1_test_result02();
+    printf("\n--------------------test case 3--------------------------\n");
+    p1_test_result03();
+    printf("\n--------------------test case 4--------------------------\n");
+    p1_test_result04();
+    printf("\n--------------------test case 5--------------------------\n");
+    p1_test_result05();
+    printf("\n--------------------test case 6--------------------------\n");
+    p1_test_result06();
+    printf("\n--------------------test case 7--------------------------\n");
+    p1_test_result07();
+    printf("\n--------------------test case 8--------------------------\n");
+    p1_test_result08();
+    printf("\n--------------------test case 9--------------------------\n");
+    p1_test_result09();
+    printf("\n--------------------test case 10-------------------------\n");
+    p1_test_result10();
+    printf("\n--------------------test case 11-------------------------\n");
+    p1_test_nestcall01();
+
+}
