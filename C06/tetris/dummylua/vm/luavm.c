@@ -347,13 +347,13 @@ static void op_not(struct lua_State* L, LClosure* cl, StkId ra, Instruction i) {
 		setbvalue(ra, !rb->value_.b);
 	} break;
 	case LUA_TLCF: {
-		setivalue(ra, !((int)rb->value_.f));
+		setivalue(ra, !((lua_Integer)rb->value_.f));
 	} break;
 	case LUA_TLIGHTUSERDATA: {
-		setivalue(ra, !((int)rb->value_.p));
+		setivalue(ra, !((lua_Integer)rb->value_.p));
 	} break;
 	default: {
-		setivalue(ra, !((int)gcvalue(rb)));
+		setivalue(ra, !((lua_Integer)gcvalue(rb)));
 	} break;
 	}
 }
