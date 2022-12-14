@@ -3,7 +3,7 @@
 
 书籍目前已经通过三审，并处于校对阶段，预计在明年2月份由机械工业出版社出版。  
 
-![image](http://manistein.club/images/build-a-lua-interpreter/cover.png)
+![image](https://raw.githubusercontent.com/Manistein/Photos/master/DailyUse/Lua/cover.png)
 
 ## 编译环境
 windows系统：所有用例均在Visual Studio 2017上通过编译和运行。  
