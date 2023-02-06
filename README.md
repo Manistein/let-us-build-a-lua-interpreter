@@ -1,7 +1,7 @@
 ## 简介
 本项目为《Lua解释器构建：从虚拟机到编译器》的随书源码。前5章的代码，均在windows平台和linux平台下通过测试。第6章的工程，为使用本书构建的Lua解释器开发的俄罗斯方块小游戏，只支持在windows系统下编译与运行。欢迎大家加群讨论QQ：185017593。  
 
-书籍已经正式上市，可以点击[官方正版链接](https://item.jd.com/10068097179009.html)购买，感谢支持。  
+书籍已经正式上市，可以点击[官方正版链接](https://item.m.jd.com/product/13807126.html?gx=RnExlzJaOzKPydRP--twWzz4fQ1sgoXIajtG&ad_od=share&utm_source=androidapp&utm_medium=appshare&utm_campaign=t_335139774&utm_term=Wxfriends)购买，感谢支持。  
 
 ![image](https://raw.githubusercontent.com/Manistein/Photos/master/DailyUse/Lua/cover.png)
 
