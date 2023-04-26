@@ -25,3 +25,7 @@ linux系统：在ubuntu18.04和centos7上，使用gcc 6.5.0通过编译，并运
   ```  
   尔后会生成makefile文件，使用make指令生成可执行文件。
 * 第6章的工程，不支持在非windows平台下构建和运行。
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Manistein/let-us-build-a-lua-interpreter&type=Date)](https://star-history.com/#Manistein/let-us-build-a-lua-interpreter&Date)
